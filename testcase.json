@@ -1,1 +1,14 @@
-2+3+10*10
+{ 
+    "mem 1": "member value 1",
+    "mem 2": "member value 2",
+    "array": [
+        "array1",
+        "array2",
+        "array2",
+        {
+            "anotherobjectmem1": "memberasdf",
+            "anotherobjectmem2": "memberasdf"
+        }, 
+        [ "some array element" ]
+    ]
+} 

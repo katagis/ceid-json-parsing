@@ -7,19 +7,58 @@ extern FILE *yyin;
 extern FILE *yyout;
 extern int yylex();
 extern int yyparse();
+#define DBG(TEXT) fprintf(stderr, "# %s\n", TEXT);
+
+// Super lazy debug macro
+#define DBG_F(...) { \
+        fprintf(stderr, "# "); \
+        fprintf(stderr, __VA_ARGS__ ); \
+        fprintf(stderr, "\n"); \
+    } 
 %}
 
-%token INT
-%left '+'
-%left '*'
+%union {
+    int AsInteger;
+    float AsFloat;
+    char* AsText;
+}
+
+%token <AsText> STRING
+%token WS
+
 %%
 
-program: expr                   { fprintf(yyout, "%i\n", $1); }
+
+object:
+    '{' members '}'             { DBG("Object") }
+    ;  
+
+members:
+    member                      { DBG("Last Member") }
+    | member ',' members        { DBG("Multiple Members") }
     ;
-                            
-expr: INT
-    | expr '+' expr             { $$ = $1 + $3; }
-    | expr '*' expr             { $$ = $1 * $3; }
+
+member:
+    STRING ':' element           { DBG_F("Member: %s", $1); }
+    ;
+
+array:
+    '[' elements ']'            { DBG("Array") }
+    ;
+
+value:
+    object                      { DBG_F("Value from object") }
+    | STRING                    { DBG_F("Value: '%s'", $1) }
+    ;
+
+elements:
+    element                     {}
+    | element ',' elements      {}
+    ;
+
+element:
+    value                       { DBG("Element") }
+    | array                     { DBG("Array") }
     ;
 
 %%

@@ -15,6 +15,7 @@ all:
 	mkdir -p $(BUILD_DIR);
 	cp $(BISON_INPUT) $(BUILD_DIR)/$(BISON_INPUT)
 	cp $(FLEX_INPUT) $(BUILD_DIR)/$(FLEX_INPUT)
+	cp *.h $(BUILD_DIR)/
 	$(_IN_BUILD) bison -y -d $(BISON_INPUT)
 	$(_IN_BUILD) flex $(FLEX_INPUT)
 	$(_IN_BUILD) $(COMPILER) -c y.tab.c lex.yy.c $(WARNINGS)
