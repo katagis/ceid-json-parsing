@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-
 namespace util {
 
 char* MakeString(char* from) {

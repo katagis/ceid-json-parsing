@@ -25,12 +25,25 @@ extern int yyparse();
 %token <AsInteger> INT
 %token <AsBool> BOOL
 %token NULL_VAL
-%token WS
+%token ERROR
 
 %%
+json: 
+    element                     { DBG("JSON") }
+    ;
+
+value:
+    object                      { DBG("Value from object") }
+    | array                     { DBG("Value from array")  }
+    | STRING                    { DBG("String ~" << $1) }
+    | number                    {}
+    | BOOL                      { DBG("Bool ~" << $1) }
+    | NULL_VAL                  { DBG("Null ~ !") }
+    ;
 
 object:
     '{' members '}'             { DBG("Object") }
+    | '{' '}'                   { DBG("Empty Object") }
     ;  
 
 members:
@@ -44,15 +57,7 @@ member:
 
 array:
     '[' elements ']'            { DBG("Array") }
-    ;
-
-value:
-    object                      { DBG("Value from object") }
-    | array                     { DBG("Value from array")  }
-    | STRING                    { DBG("String ~" << $1) }
-    | number                    {}
-    | BOOL                      { DBG("Bool ~" << $1) }
-    | NULL_VAL                  { DBG("Null ~ !") }
+    | '[' ']'                   { DBG("Empty Array") }
     ;
 
 elements:
