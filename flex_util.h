@@ -29,6 +29,7 @@ struct ParserState {
         LastMatch = text;
     }
 
+    // Prints a "pretty" formatted line
     int PrintLine(int Index) const {
         if (Index < 0) {
             return 0;
@@ -37,6 +38,7 @@ struct ParserState {
         return LineTexts[Index].length();
     }
 
+    // Prints a "pretty" fromatted error including the previous line for context.
     void ReportErrorAtOffset(int offset) const {
         const std::string& last_line = LineTexts[LineNum];
         const size_t slice_start = last_line.length() > offset ? last_line.length() - offset : 0;

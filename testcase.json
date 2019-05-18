@@ -1,34 +1,12 @@
-{ 
-    "mem 1": "member value 1",
-    "mem 2": "member value 2",
-    "array": [
-        "array1",
-        "array2",
-        "array2",
-        {
-            "anotherobjectmem1": "memberasdf",
-            "anotherobjectmem2": "memberasdf"
-        }, 
-        [ "some array element" ], "zz"
-        -20,
-        0,
-        -20.6454,
-        -1.0,
-        0.5,
-        -3.9e-3,
-        -3e-3,
-        true,
-        false,
-        null,
-        {},
-        [],
-        { },
-        [   
-
-
-        ]
-    ],
-    "obj": {
-        "z": true
+[
+    "",
+    "Normal string",
+    "Simple quote escape \"  with a bunch of stuff,", 
+    "Escape Quote \" DoubleSlash \\ |",
+    "Escape Quote \" DoubleSlash \\ | OtherSlash \/ | NewLine \n Unicode 2328: \u2328 Unicode fe0f: \ufe0f",
+    "Escape HTML: (+) %2B  (!) %21 ( ) %20 comma %2C & %26",
+    "More escapes .%AA, % %% x%2B% ...",
+    {
+        "object": true
     }
-}
+]
