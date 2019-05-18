@@ -10,5 +10,14 @@
             "anotherobjectmem2": "memberasdf"
         }, 
         [ "some array element" ]
-    ]
-} 
+    ],
+    "float_simple": -20.6454,
+    "integer_": -20,
+    "float_scientific1": -1.0,
+    "float_scientific2": 0.5,
+    "float_scientific3": -3.9e-3,
+    "float_scientific4": -3e-3,
+    "bool true": true,
+    "bool false": false,
+    "NULLVAL": null
+}

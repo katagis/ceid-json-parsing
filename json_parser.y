@@ -2,32 +2,32 @@
 %{
 #include <stdio.h>
 #include <math.h>
+#include <iostream>
 void yyerror(const char *);
 extern FILE *yyin;
 extern FILE *yyout;
 extern int yylex();
 extern int yyparse();
-#define DBG(TEXT) fprintf(stderr, "# %s\n", TEXT);
 
-// Super lazy debug macro
-#define DBG_F(...) { \
-        fprintf(stderr, "# "); \
-        fprintf(stderr, __VA_ARGS__ ); \
-        fprintf(stderr, "\n"); \
-    } 
+#define DBG(TEXT) std::cerr << "# " << TEXT << "\n";
 %}
+
 
 %union {
     int AsInteger;
     float AsFloat;
     char* AsText;
+    bool AsBool;
 }
 
 %token <AsText> STRING
+%token <AsFloat> FLOAT
+%token <AsInteger> INT
+%token <AsBool> BOOL
+%token NULL_VAL
 %token WS
 
 %%
-
 
 object:
     '{' members '}'             { DBG("Object") }
@@ -39,7 +39,7 @@ members:
     ;
 
 member:
-    STRING ':' element           { DBG_F("Member: %s", $1); }
+    STRING ':' element           { DBG("Member @" << $1) }
     ;
 
 array:
@@ -47,8 +47,12 @@ array:
     ;
 
 value:
-    object                      { DBG_F("Value from object") }
-    | STRING                    { DBG_F("Value: '%s'", $1) }
+    object                      { DBG("Value from object") }
+    | array                     { DBG("Value from array")  }
+    | STRING                    { DBG("String ~" << $1) }
+    | number                    {}
+    | BOOL                      { DBG("Bool ~" << $1) }
+    | NULL_VAL                  { DBG("Null ~ !") }
     ;
 
 elements:
@@ -58,7 +62,11 @@ elements:
 
 element:
     value                       { DBG("Element") }
-    | array                     { DBG("Array") }
+    ;
+
+number:
+    FLOAT                       { DBG("Float ~" << $1) }
+    | INT                       { DBG("Integ ~" << $1) }
     ;
 
 %%
