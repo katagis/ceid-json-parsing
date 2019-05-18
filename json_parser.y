@@ -1,5 +1,7 @@
 
 %{
+#include "flex_util.h"
+
 #include <stdio.h>
 #include <math.h>
 #include <iostream>
@@ -12,6 +14,7 @@ extern int yyparse();
 #define DBG(TEXT) std::cerr << "# " << TEXT << "\n";
 %}
 
+%error-verbose
 
 %union {
     int AsInteger;
@@ -25,7 +28,7 @@ extern int yyparse();
 %token <AsInteger> INT
 %token <AsBool> BOOL
 %token NULL_VAL
-%token ERROR
+%token INVALID_CHARACTER
 
 %%
 json: 
@@ -77,7 +80,7 @@ number:
 %%
 
 void yyerror(const char *s) {
-    fprintf(stderr, "%s\n", s);
+    parse.ReportError(s);
 }
 
 void parse_args(int argc, char **argv);

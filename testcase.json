@@ -9,7 +9,7 @@
             "anotherobjectmem1": "memberasdf",
             "anotherobjectmem2": "memberasdf"
         }, 
-        [ "some array element" ],
+        [ "some array element" ], "zz"
         -20,
         0,
         -20.6454,
@@ -27,5 +27,8 @@
 
 
         ]
-    ]
+    ],
+    "obj": {
+        "z": true
+    }
 }
