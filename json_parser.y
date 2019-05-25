@@ -1,6 +1,7 @@
 
 %{
 #include "flex_util.h"
+#include "json_classes.h"
 
 #include <stdio.h>
 #include <math.h>
@@ -21,6 +22,13 @@ extern int yyparse();
     float AsFloat;
     char* AsText;
     bool AsBool;
+    JValue* AsJValue;
+    JArray* AsJArray;
+    JMember* AsJMember;
+    JObject* AsJObject;
+    JJson* AsJJson;
+    std::vector<JValue*> AsIntermValues;
+    std::vector<JMember*> AsIntermMembers;
 }
 
 %token <AsText> STRING
@@ -30,18 +38,31 @@ extern int yyparse();
 %token NULL_VAL
 %token INVALID_CHARACTER
 
+%type <AsJValue> value
+%type <AsJArray> array
+%type <AsJMember> member
+%type <AsJObject> object
+%type <AsJJson> json
+%type <AsJValue> element
+
+%type <AsIntermValues> values
+%type <AsIntermMembers> members
+
+
+
 %%
 json: 
-    element                     { DBG("JSON") }
+    values                     { $$. }
     ;
 
 value:
-    object                      { DBG("Value from object") }
-    | array                     { DBG("Value from array")  }
-    | STRING                    { DBG("String ~" << $1) }
-    | number                    {}
-    | BOOL                      { DBG("Bool ~" << $1) }
-    | NULL_VAL                  { DBG("Null ~ !") }
+    object                      { $$ = new JValue($1);  }
+    | array                     { $$ = new JValue($1);  }
+    | STRING                    { $$ = new JValue(*$1); }
+    | FLOAT                     { $$ = new JValue($1);  }
+    | INT                       { $$ = new JValue($1);  }
+    | BOOL                      { $$ = new JValue($1);  }
+    | NULL_VAL                  { $$ = new JValue();    }
     ;
 
 object:
@@ -55,26 +76,17 @@ members:
     ;
 
 member:
-    STRING ':' element           { DBG("Member @" << $1) }
+    STRING ':' value            { DBG("Member @" << $1) }
     ;
 
 array:
-    '[' elements ']'            { DBG("Array") }
+    '[' values ']'              { DBG("Array") }
     | '[' ']'                   { DBG("Empty Array") }
     ;
 
-elements:
-    element                     {}
-    | element ',' elements      {}
-    ;
-
-element:
-    value                       { DBG("Element") }
-    ;
-
-number:
-    FLOAT                       { DBG("Float ~" << $1) }
-    | INT                       { DBG("Integ ~" << $1) }
+values:
+    value                   {}
+    | value ',' values      {}
     ;
 
 %%

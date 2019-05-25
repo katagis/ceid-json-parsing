@@ -2,6 +2,7 @@
 
 %{
 #include "flex_util.h"
+#include "json_classes.h"
 ParserState parse;
 
 #include "y.tab.h"  

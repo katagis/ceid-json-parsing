@@ -61,6 +61,8 @@ struct ParserState {
     }
 };
 
+
+
 // Due to the way each file from flex & bison partialy includes one another we make this extern and define it in the .l
 extern ParserState parse;
 
@@ -79,5 +81,8 @@ static int MakeInt(char* from) {
 }
 
 } // util
+
+
+
 
 #endif //__FLEX_UTIL_H_

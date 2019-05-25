@@ -1,12 +1,12 @@
 [
-    "",
-    "Normal string",
-    "Simple quote escape \"  with a bunch of stuff,", 
-    "Escape Quote \" DoubleSlash \\ |",
-    "Escape Quote \" DoubleSlash \\ | OtherSlash \/ | NewLine \n Unicode 2328: \u2328 Unicode fe0f: \ufe0f",
-    "Escape HTML: (+) %2B  (!) %21 ( ) %20 comma %2C & %26",
-    "More escapes .%AA, % %% x%2B% ...",
     {
         "object": true
-    }
+    },
+    [ "array" ],
+    "Escape Quote \" DoubleSlash \\ | OtherSlash \/ | NewLine \n Unicode 2328: \u2328 Unicode fe0f: \ufe0f",
+    0.1212,
+    123,
+    true,
+    false,
+    null    
 ]
