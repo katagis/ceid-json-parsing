@@ -1,12 +1,43 @@
-[
-    {
+{
+    "myname": {
         "object": true
     },
-    [ "array" ],
-    "Escape Quote \" DoubleSlash \\ | OtherSlash \/ | NewLine \n Unicode 2328: \u2328 Unicode fe0f: \ufe0f",
-    0.1212,
-    123,
-    true,
-    false,
-    null    
-]
+    "myarray": [
+        [
+            ""
+        ],
+        "Escape Quote \" DoubleSlash \\ | OtherSlash \/ | NewLine \n Unicode 2328: \u2328 Unicode fe0f: \ufe0f",
+        "myval",
+        0.1212,
+        123,
+        true,
+        false,
+        null,
+        {
+            "asdf": {
+                "asdf": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    null
+                ]
+            },
+            "asdf2": {
+                "asdf3": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    null
+                ]
+            }
+        }
+    ]
+}

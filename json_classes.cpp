@@ -1,5 +1,10 @@
 #include "json_classes.h"
 #include <ostream>
+#include <iomanip>
+
+void Indent(std::ostream& os, int num) {
+    os << std::string(num * 2, ' ');
+}
 
 std::ostream& JValue::Print(std::ostream& os, int indent) const {
     switch(Type) {
@@ -34,13 +39,16 @@ std::ostream& JValue::Print(std::ostream& os, int indent) const {
 }
 
 std::ostream& JArray::Print(std::ostream& os, int indent) const {
-    os << "[\n"; 
-    for (JValue* value : Elements) {
-        os << std::string("\t", indent + 1);
-        value->Print(os, indent + 1);
-        os << ",\n";
+    os << "["; 
+    for (auto it = Elements.rbegin(); it != Elements.rend(); ++it) {
+        os << "\n"; 
+        Indent(os, indent + 1);
+        (*it)->Print(os, indent + 1);
+        os << ",";
     }
-    os << std::string("\t", indent) << "]"; 
+    os << "\b \n";
+    Indent(os, indent);
+    os << "]"; 
     return os;
 }
 
@@ -51,16 +59,20 @@ std::ostream& JMember::Print(std::ostream& os, int indentation) const {
 }
 
 std::ostream& JObject::Print(std::ostream& os, int indent) const {
-    os << "{\n"; 
-    for (JMember* member : Members) {
-        os << std::string("\t", indent + 1);
-        member->Print(os, indent + 1);
-        os << ",\n";
+    os << "{"; 
+    for (auto it = Members.rbegin(); it != Members.rend(); ++it) {
+        os << "\n"; 
+        Indent(os, indent + 1);
+        (*it)->Print(os, indent + 1);
+        os << ",";
     }
-    os << std::string("\t", indent) << "}"; 
+    os << "\b \n";
+    Indent(os, indent);
+    os << "}"; 
     return os;
 }
 
 std::ostream& JJson::Print(std::ostream& os) const {
     JsonData->Print(os, 0);
+    os << "\n";
 };

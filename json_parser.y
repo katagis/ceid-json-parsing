@@ -27,8 +27,8 @@ extern int yyparse();
     JMember* AsJMember;
     JObject* AsJObject;
     JJson* AsJJson;
-    std::vector<JValue*> AsIntermValues;
-    std::vector<JMember*> AsIntermMembers;
+    std::vector<JValue*>* AsIntermValues;
+    std::vector<JMember*>* AsIntermMembers;
 }
 
 %token <AsText> STRING
@@ -43,7 +43,6 @@ extern int yyparse();
 %type <AsJMember> member
 %type <AsJObject> object
 %type <AsJJson> json
-%type <AsJValue> element
 
 %type <AsIntermValues> values
 %type <AsIntermMembers> members
@@ -52,13 +51,17 @@ extern int yyparse();
 
 %%
 json: 
-    values                     { $$. }
+    value                       { 
+                                  //DBG("JSON PARSED") 
+                                  $$ = new JJson($1); 
+                                  $$->Print(std::cout);
+                                }
     ;
 
 value:
     object                      { $$ = new JValue($1);  }
     | array                     { $$ = new JValue($1);  }
-    | STRING                    { $$ = new JValue(*$1); }
+    | STRING                    { $$ = new JValue($1); }
     | FLOAT                     { $$ = new JValue($1);  }
     | INT                       { $$ = new JValue($1);  }
     | BOOL                      { $$ = new JValue($1);  }
@@ -66,27 +69,27 @@ value:
     ;
 
 object:
-    '{' members '}'             { DBG("Object") }
-    | '{' '}'                   { DBG("Empty Object") }
+    '{' members '}'             { $$ = new JObject(*$2); }
+    | '{' '}'                   { $$ = new JObject(   ); }
     ;  
 
 members:
-    member                      { DBG("Last Member") }
-    | member ',' members        { DBG("Multiple Members") }
+    member                      { $$ = new std::vector<JMember*>(); $$->push_back($1); }
+    | member ',' members        { $3->push_back($1); $$ = $3; }
     ;
 
 member:
-    STRING ':' value            { DBG("Member @" << $1) }
+    STRING ':' value            { $$ = new JMember($1, $3); }
     ;
 
 array:
-    '[' values ']'              { DBG("Array") }
-    | '[' ']'                   { DBG("Empty Array") }
+    '[' values ']'              { $$ = new JArray(*$2);}
+    | '[' ']'                   { $$ = new JArray(   ); }
     ;
 
 values:
-    value                   {}
-    | value ',' values      {}
+    value                       { $$ = new std::vector<JValue*>(); $$->push_back($1); }
+    | value ',' values          { $3->push_back($1); $$ = $3; }
     ;
 
 %%

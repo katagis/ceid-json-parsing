@@ -3,7 +3,9 @@
 
 #include <vector>
 #include <string>
-#include <ostream>
+#include <iostream>
+#include <cstring>
+
 
 struct JObject;
 struct JArray;
@@ -21,7 +23,7 @@ enum class JValueType {
 union JValueData {
     JObject* ObjectData;
     JArray* ArrayData;
-    std::string StringData;
+    char* StringData;
     float FloatData;
     int IntData;
     bool BoolData;
@@ -51,9 +53,9 @@ struct JValue {
         Data.ArrayData = data;
     }
 
-    JValue(const char* string) {
+    JValue(char* data) {
         Type = JValueType::String;
-        Data.StringData = std::string(string);
+        Data.StringData = data;
     }
 
     JValue(float num) {
@@ -75,6 +77,12 @@ struct JValue {
 struct JArray {
     std::vector<JValue*> Elements;
 
+    JArray() {}
+
+    JArray(std::vector<JValue*>& list) {
+        std::swap(Elements, list);
+    }
+
     std::ostream& Print(std::ostream& os, int indentation) const;
 };
 
@@ -92,11 +100,20 @@ struct JMember {
 struct JObject {
     std::vector<JMember*> Members;
 
+    JObject() {}
+
+    JObject(std::vector<JMember*>& list) {
+        std::swap(Members, list);
+    }
+
     std::ostream& Print(std::ostream& os, int indentation) const;
 };
 
 struct JJson {
     JValue* JsonData;
+
+    JJson(JValue* data)
+        : JsonData(data) {}
 
     std::ostream& Print(std::ostream& os) const;
 };
