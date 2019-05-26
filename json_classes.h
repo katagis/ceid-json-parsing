@@ -32,6 +32,18 @@ union JValueData {
     ~JValueData() {};
 };
 
+enum class JSpecialMember {
+    None, // Not a special member
+    IdStr,
+    Text,
+    CreatedAt,
+    User,
+    UName,
+    UScreenName,
+    ULocation,
+    UId
+};
+
 struct JValue {
     JValueType Type;
     JValueData Data;
@@ -89,12 +101,14 @@ struct JArray {
 struct JMember {
     std::string Name;
     JValue* Value;
+    JSpecialMember SpecialType;
 
     std::ostream& Print(std::ostream& os, int indentation) const;
 
-    JMember(const char* name, JValue* value)
+    JMember(const char* name, JValue* value, JSpecialMember type = JSpecialMember::None)
         : Name(std::string(name))
-        , Value(value) {}
+        , Value(value)
+        , SpecialType(type) {}
 };
 
 struct JObject {
@@ -116,6 +130,52 @@ struct JJson {
         : JsonData(data) {}
 
     std::ostream& Print(std::ostream& os) const;
+};
+
+struct JMemberList {
+    std::vector<JMember*> MemberList;
+
+    JMember* IdStr;
+    JMember* Text;
+    JMember* CreatedAt;
+    JMember* User;
+    JMember* UName;
+    JMember* UScreenName;
+    JMember* ULocation;
+    JMember* UId;
+
+    JMemberList()
+        : IdStr(nullptr)
+        , Text(nullptr)
+        , CreatedAt(nullptr)
+        , User(nullptr)
+        , UName(nullptr)
+        , UScreenName(nullptr)
+        , ULocation(nullptr) {}
+
+    void AddMember(JMember* member) {
+        MemberList.push_back(member);
+        switch(member->SpecialType) {
+            case JSpecialMember::IdStr:         IdStr = member; break;
+            case JSpecialMember::Text:          Text = member; break;
+            case JSpecialMember::CreatedAt:     CreatedAt = member; break;
+            case JSpecialMember::User:          User = member; break;
+            case JSpecialMember::UName:         UName = member; break;
+            case JSpecialMember::UScreenName:   UScreenName = member; break;
+            case JSpecialMember::ULocation:     ULocation = member; break;
+            case JSpecialMember::UId:           UId = member; break;
+            default:
+                break;
+        }
+    }
+
+    bool IsValidUser() const {
+        return UName && UScreenName && ULocation && UId;
+    }
+
+    bool IsValidOuter() const {
+        return IdStr && Text && User && CreatedAt;
+    }
 };
 
 
