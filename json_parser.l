@@ -25,6 +25,8 @@ ParserState parse;
 // The string matcher extracts the whole quoted strings without doing any processing.
 // The result is given to util::MakeString which in turn replaces all the character escapes
 // This makes our grammar rules a lot simpler as we never have to mix strings
+
+//date        "\"{literaldays} {literalmonths} {numerday} {time} ({timezone} )?{year}\""
 %}
 
 float   -?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?
@@ -36,8 +38,19 @@ escape  n|\"|\\|\/|\u[0-9a-fA-F]{4}
 string  \"([^\\\n\r\"]*(\\({escape}))?)*\"
 
 errchar [^\"\[\]\,\:\{\}\r\n\t ]+
-%%
 
+
+literaldays     (Sun|Mon|Tue|Wed|Thu|Fri|Sat)
+literalmonths   (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)
+numerday        ([0-2][0-9]|3[0-1])     
+time            ([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]
+timezone        [+-](0[0-9]|1[0-2])[0-5][0-9]
+year            [0-9]{4}
+
+date        \"{literaldays}[ ]{literalmonths}[ ]{numerday}[ ]{time}[ ]({timezone}[ ])?{year}\"
+
+%%
+{date}      { MATCH DBG yylval.AsText= util::MakeString(yytext);  return STRING; }
 {string}    { MATCH yylval.AsText    = util::MakeString(yytext);  return STRING; }
 {integ}     { MATCH yylval.AsInteger = util::MakeInt(yytext);     return INT; }
 {float}     { MATCH yylval.AsFloat   = util::MakeFloat(yytext);   return FLOAT; }
@@ -60,6 +73,8 @@ errchar [^\"\[\]\,\:\{\}\r\n\t ]+
 // This will match the whole or parts of incorrectly formatted strings.
 // Even if the exact error is not shown its better than no match at all.
 // 
-
 // *2
 // This will match invalid characters not in quotes.
+//
+// The other option for error reporing would be to make a rule for INVALID_CHARACTER in grammar
+// until we match a specific delimiter and then produce the error.

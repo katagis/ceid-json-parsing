@@ -40,19 +40,27 @@ struct ParserState {
 
     // Prints a "pretty" fromatted error including the previous line for context.
     void ReportErrorAtOffset(int offset) const {
+        std::string error_token = "";
+        
         const std::string& last_line = LineTexts[LineNum];
         const size_t slice_start = last_line.length() > offset ? last_line.length() - offset : 0;
        
-        std::cerr << "Failed to parse: '" << last_line.substr(slice_start) << "'\n";
+       if (last_line.length() > 0) {
+           error_token = last_line.substr(slice_start);
+       }
+
+        std::cerr << "Failed to parse: '" << error_token << "'\n";
         PrintLine(LineNum - 1);
-        const int error_loc = PrintLine(LineNum) - offset - 1;
+        const int error_loc = PrintLine(LineNum) - offset;
         
-        std::cerr << std::string(9, '>') << " " << std::string(error_loc, '-') 
+        std::cerr << std::string(9, '>') << std::string(std::max(error_loc, 0), '-') 
                 << " " << std::string(LastMatch.length(), '^') << "\n";
     }
 
     void ReportLastTokenError() const {
-        ReportErrorAtOffset(LastMatch.size());
+        if (LastMatch.size()) {
+            ReportErrorAtOffset(LastMatch.size());
+        }
     }
 
     void ReportError(const std::string& reason) const {
