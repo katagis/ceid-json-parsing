@@ -4,11 +4,23 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <unordered_set>
 #include <cstring>
 
 
 struct JObject;
 struct JArray;
+
+// Global DB keeping track of ids
+struct JsonDB {
+    std::unordered_set<std::string> IdStrs;
+    std::unordered_set<int> UserIds;
+
+    // Attempts to Insert an id_str element in the database. Returns false if it already existed
+    bool MaybeInsertIdStr(const char* id_str);
+    // Attempts to Insert a user_id element in the database. Returns false if it already existed
+    bool MaybeInsertUserId(int id);
+};
 
 enum class JValueType {
     Object,
@@ -91,8 +103,8 @@ struct JArray {
 
     JArray() {}
 
-    JArray(std::vector<JValue*>& list) {
-        std::swap(Elements, list);
+    void AddValue(JValue* value) {
+        Elements.push_back(value);
     }
 
     std::ostream& Print(std::ostream& os, int indentation) const;
@@ -111,8 +123,52 @@ struct JMember {
         , SpecialType(type) {}
 };
 
+
+struct JUserMembers {
+    JMember* UName;
+    JMember* UScreenName;
+    JMember* ULocation;
+    JMember* UId;
+
+    JUserMembers()
+        : UName(nullptr)
+        , UScreenName(nullptr)
+        , ULocation(nullptr)
+        , UId(nullptr) {}
+
+    bool IsValid() const {
+        return UName 
+            && UScreenName
+            && ULocation
+            && UId;
+    }
+};
+
+struct JOuterMembers {
+    JMember* IdStr;
+    JMember* Text;
+    JMember* CreatedAt;
+    JMember* User;
+
+    JOuterMembers()
+        : IdStr(nullptr)
+        , Text(nullptr)
+        , CreatedAt(nullptr)
+        , User(nullptr) {}
+
+    bool IsValid() const {
+        return IdStr
+            && Text
+            && User
+            && CreatedAt;
+    }
+};
+
 struct JObject {
     std::vector<JMember*> Members;
+
+    JOuterMembers OuterMembers;
+    JUserMembers UserMembers;
 
     JObject() {}
 
@@ -121,6 +177,30 @@ struct JObject {
     }
 
     std::ostream& Print(std::ostream& os, int indentation) const;
+
+    void AddMember(JMember* member) {
+        Members.push_back(member);
+        switch(member->SpecialType) {
+            case JSpecialMember::IdStr:         OuterMembers.IdStr = member; break;
+            case JSpecialMember::Text:          OuterMembers.Text = member; break;
+            case JSpecialMember::CreatedAt:     OuterMembers.CreatedAt = member; break;
+            case JSpecialMember::User:          OuterMembers.User = member; break;
+            case JSpecialMember::UName:         UserMembers.UName = member; break;
+            case JSpecialMember::UScreenName:   UserMembers.UScreenName = member; break;
+            case JSpecialMember::ULocation:     UserMembers.ULocation = member; break;
+            case JSpecialMember::UId:           UserMembers.UId = member; break;
+            default:
+                break;
+        }
+    }
+
+    bool IsValidUser() const {
+        return UserMembers.IsValid(); 
+    }
+
+    bool IsValidOuter() const {
+        return OuterMembers.IsValid();
+    }
 };
 
 struct JJson {
@@ -131,52 +211,5 @@ struct JJson {
 
     std::ostream& Print(std::ostream& os) const;
 };
-
-struct JMemberList {
-    std::vector<JMember*> MemberList;
-
-    JMember* IdStr;
-    JMember* Text;
-    JMember* CreatedAt;
-    JMember* User;
-    JMember* UName;
-    JMember* UScreenName;
-    JMember* ULocation;
-    JMember* UId;
-
-    JMemberList()
-        : IdStr(nullptr)
-        , Text(nullptr)
-        , CreatedAt(nullptr)
-        , User(nullptr)
-        , UName(nullptr)
-        , UScreenName(nullptr)
-        , ULocation(nullptr) {}
-
-    void AddMember(JMember* member) {
-        MemberList.push_back(member);
-        switch(member->SpecialType) {
-            case JSpecialMember::IdStr:         IdStr = member; break;
-            case JSpecialMember::Text:          Text = member; break;
-            case JSpecialMember::CreatedAt:     CreatedAt = member; break;
-            case JSpecialMember::User:          User = member; break;
-            case JSpecialMember::UName:         UName = member; break;
-            case JSpecialMember::UScreenName:   UScreenName = member; break;
-            case JSpecialMember::ULocation:     ULocation = member; break;
-            case JSpecialMember::UId:           UId = member; break;
-            default:
-                break;
-        }
-    }
-
-    bool IsValidUser() const {
-        return UName && UScreenName && ULocation && UId;
-    }
-
-    bool IsValidOuter() const {
-        return IdStr && Text && User && CreatedAt;
-    }
-};
-
 
 #endif //__JSON_CLASSES_

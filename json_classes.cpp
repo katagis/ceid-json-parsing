@@ -6,6 +6,18 @@ void Indent(std::ostream& os, int num) {
     os << std::string(num * 2, ' ');
 }
 
+bool JsonDB::MaybeInsertIdStr(const char* data) {
+    auto result = IdStrs.insert(std::string(data));
+    // return if insert actually happened
+    return result.second;
+}
+
+bool JsonDB::MaybeInsertUserId(int id) {
+    auto result = UserIds.insert(id);
+    return result.second;
+}
+
+
 std::ostream& JValue::Print(std::ostream& os, int indent) const {
     switch(Type) {
         case JValueType::Object:

@@ -12,6 +12,8 @@ extern FILE *yyout;
 extern int yylex();
 extern int yyparse();
 
+JsonDB database;
+
 #define DBG(TEXT) std::cerr << "# " << TEXT << "\n";
 %}
 
@@ -27,8 +29,6 @@ extern int yyparse();
     JMember* AsJMember;
     JObject* AsJObject;
     JJson* AsJJson;
-    std::vector<JValue*>* AsIntermValues;
-    JMemberList* AsIntermMembers;
 }
 
 %token <AsText> STRING
@@ -61,8 +61,9 @@ extern int yyparse();
 %type <AsJObject> object
 %type <AsJJson> json
 
-%type <AsIntermValues> values
-%type <AsIntermMembers> members
+%type <AsJArray> values
+%type <AsJObject> members
+
 
 %%
 json: 
@@ -89,39 +90,59 @@ value:
 object:
     '{' members '}'             { 
                                     DBG("IsUser: " << $2->IsValidUser() << " IsOuter: " << $2->IsValidOuter())
-                                    $$ = new JObject($2->MemberList); 
+                                    $$ = $2;
                                 }
-    | '{' '}'                   { $$ = new JObject(   ); }
+    | '{' '}'                   { $$ = new JObject(); }
     ;  
 
 members:
-    member                      { $$ = new JMemberList(); $$->AddMember($1); }
-    | member ',' members        { $$ = $3;                $$->AddMember($1); }
+    member                      { $$ = new JObject(); $$->AddMember($1); }
+    | member ',' members        { $$ = $3;            $$->AddMember($1); }
     ;
 
 member:
     STRING ':' value              { $$ = new JMember($1, $3); }
-    | F_ID_STR ':' D_ID_STR       { $$ = new JMember($1, new JValue($3), JSpecialMember::IdStr); }
+    | F_ID_STR ':' D_ID_STR       { 
+                                    if (database.MaybeInsertIdStr($3)) {
+                                        $$ = new JMember($1, new JValue($3), JSpecialMember::IdStr); 
+                                    }
+                                    else {
+                                        parse.ReportError("ID String already exists.");
+                                        YYERROR;
+                                    }
+                                  }
     | F_TEXT ':' STRING           { $$ = new JMember($1, new JValue($3), JSpecialMember::Text); }
     | F_CREATEDAT ':' D_DATE      { $$ = new JMember($1, new JValue($3), JSpecialMember::CreatedAt); }
     | F_UNAME ':' STRING          { $$ = new JMember($1, new JValue($3), JSpecialMember::UName); }
     | F_USCREEN ':' STRING        { $$ = new JMember($1, new JValue($3), JSpecialMember::UScreenName); }
     | F_ULOCATION ':' STRING      { $$ = new JMember($1, new JValue($3), JSpecialMember::ULocation); }
-    | F_UID ':' POS_INT           { $$ = new JMember($1, new JValue($3), JSpecialMember::UId); }
+    | F_UID ':' POS_INT           { 
+                                    if (database.MaybeInsertUserId($3)) {
+                                        $$ = new JMember($1, new JValue($3), JSpecialMember::UId); 
+                                    }
+                                    else {
+                                        parse.ReportError("User ID already exists.");
+                                        YYERROR;
+                                    }
+                                  }
     | F_USER ':' object           { 
-                                      /* todo: check if this is actual user */
-                                      $$ = new JMember($1, new JValue($3), JSpecialMember::User);  
-                                      
+                                    if ($3->IsValidUser()) {
+                                        $$ = new JMember($1, new JValue($3), JSpecialMember::User);
+                                    }
+                                    else {
+                                        parse.ReportError("User ending here is missing fields.");
+                                        YYERROR;
+                                    }
                                   }
 
 array:
-    '[' values ']'              { $$ = new JArray(*$2);}
-    | '[' ']'                   { $$ = new JArray(   ); }
+    '[' values ']'              { $$ = $2; }
+    | '[' ']'                   { $$ = new JArray(); }
     ;
 
 values:
-    value                       { $$ = new std::vector<JValue*>(); $$->push_back($1); }
-    | value ',' values          { $3->push_back($1); $$ = $3; }
+    value                       { $$ = new JArray(); $$->AddValue($1); }
+    | value ',' values          { $$ = $3;           $$->AddValue($1); }
     ;
 
 %%
