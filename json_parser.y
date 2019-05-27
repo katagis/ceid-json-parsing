@@ -77,7 +77,7 @@ json:
 value:
     object                      { $$ = new JValue($1); }
     | array                     { $$ = new JValue($1); }
-    | STRING                    { $$ = new JValue($1); }
+    | STRING                    { $$ = new JValue(new JString($1)); }
     | FLOAT                     { $$ = new JValue($1); }
     | POS_INT                   { $$ = new JValue($1); }
     | NEG_INT                   { $$ = new JValue($1); }

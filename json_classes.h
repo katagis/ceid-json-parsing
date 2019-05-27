@@ -10,6 +10,7 @@
 
 struct JObject;
 struct JArray;
+struct JString;
 
 // Global DB keeping track of ids
 struct JsonDB {
@@ -35,7 +36,7 @@ enum class JValueType {
 union JValueData {
     JObject* ObjectData;
     JArray* ArrayData;
-    char* StringData;
+    JString* StringData;
     float FloatData;
     int IntData;
     bool BoolData;
@@ -54,6 +55,35 @@ enum class JSpecialMember {
     UScreenName,
     ULocation,
     UId
+};
+
+// POD utility for storing a starting point of a hashtag and its text.
+struct HashTagData {
+    std::string Tag;
+    unsigned int BeginByte;
+
+    unsigned int GetEndByte() const {
+        return BeginByte + Tag.length() + 1; // offset the '#' character
+    }
+};
+
+// We use our own specialized string struct that stores hash tags, length, byte length.
+struct JString {
+    // 'actuall' length after merging unicode characters as 1 chars.
+    // to get byte length use Text.length()
+    unsigned int Length;
+
+    // Converted text.
+    std::string Text;
+    // This will contain the hashtags found (if any)
+    std::vector<HashTagData> Hashtags;
+    std::string RetweetUser;
+
+    JString(char* cstring);
+
+    std::ostream& Print(std::ostream& os) const;
+
+    bool IsRetweet() const;
 };
 
 struct JValue {
@@ -77,7 +107,7 @@ struct JValue {
         Data.ArrayData = data;
     }
 
-    JValue(char* data) {
+    JValue(JString* data) {
         Type = JValueType::String;
         Data.StringData = data;
     }
