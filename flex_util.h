@@ -84,8 +84,8 @@ static float MakeFloat(char* from) {
     return atof(from);
 }
 
-static int MakeInt(char* from) {
-    return atoi(from);
+static long long MakeInt(char* from) {
+    return atoll(from);
 }
 
 } // util

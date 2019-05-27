@@ -13,7 +13,7 @@ bool JsonDB::MaybeInsertIdStr(const char* data) {
     return result.second;
 }
 
-bool JsonDB::MaybeInsertUserId(int id) {
+bool JsonDB::MaybeInsertUserId(long long id) {
     auto result = UserIds.insert(id);
     return result.second;
 }
@@ -51,7 +51,7 @@ std::ostream& JValue::Print(std::ostream& os, int indent) const {
 }
 
 std::ostream& JArray::Print(std::ostream& os, int indent) const {
-    os << "["; 
+    os << "[ "; 
     for (auto it = Elements.rbegin(); it != Elements.rend(); ++it) {
         os << "\n"; 
         Indent(os, indent + 1);
@@ -71,7 +71,7 @@ std::ostream& JMember::Print(std::ostream& os, int indentation) const {
 }
 
 std::ostream& JObject::Print(std::ostream& os, int indent) const {
-    os << "{"; 
+    os << "{ "; 
     for (auto it = Members.rbegin(); it != Members.rend(); ++it) {
         os << "\n"; 
         Indent(os, indent + 1);
@@ -210,8 +210,9 @@ JString::JString(char* source) {
                   *readptr == '_')  // Allow underscore
             {                                           // Everything else stops the hashtag
                 hashtag.Tag.push_back(*readptr);
+                readptr++;
             }
-
+            
             if (hashtag.Tag.length() > 0) {
                 // We have a valid hashtag.
                 hashtag.BeginByte = i; // conatins the '#' param
@@ -244,6 +245,7 @@ JString::JString(char* source) {
                  *readptr == '_')  // Allow underscore
         {
             RetweetUser.push_back(*readptr);
+            readptr++;
         }
     }
 }

@@ -15,12 +15,12 @@ struct JString;
 // Global DB keeping track of ids
 struct JsonDB {
     std::unordered_set<std::string> IdStrs;
-    std::unordered_set<int> UserIds;
+    std::unordered_set<long long> UserIds;
 
     // Attempts to Insert an id_str element in the database. Returns false if it already existed
     bool MaybeInsertIdStr(const char* id_str);
     // Attempts to Insert a user_id element in the database. Returns false if it already existed
-    bool MaybeInsertUserId(int id);
+    bool MaybeInsertUserId(long long id);
 };
 
 enum class JValueType {
@@ -38,7 +38,7 @@ union JValueData {
     JArray* ArrayData;
     JString* StringData;
     float FloatData;
-    int IntData;
+    long long IntData;
     bool BoolData;
     
     JValueData() {};
@@ -107,6 +107,12 @@ struct JValue {
         Data.ArrayData = data;
     }
 
+    JValue(char* data) {
+        JString* jstr = new JString(data);
+        Type = JValueType::String;
+        Data.StringData = jstr;
+    }
+    
     JValue(JString* data) {
         Type = JValueType::String;
         Data.StringData = data;
@@ -117,7 +123,7 @@ struct JValue {
         Data.FloatData = num;
     }
 
-    JValue(int num) {
+    JValue(long long num) {
         Type = JValueType::Int;
         Data.IntData = num;
     }
@@ -171,6 +177,10 @@ struct JUserMembers {
             && UScreenName
             && ULocation
             && UId;
+    }
+
+    bool IsRetweetValid() const {
+        return UScreenName != nullptr;
     }
 };
 
@@ -226,6 +236,10 @@ struct JObject {
 
     bool IsValidUser() const {
         return UserMembers.IsValid(); 
+    }
+    
+    bool IsValidRetweetUser() const {
+        return UserMembers.IsRetweetValid(); 
     }
 
     bool IsValidOuter() const {

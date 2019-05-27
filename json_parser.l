@@ -85,6 +85,7 @@ id_str      \"[0-9]+\"
 {errchar}   { MATCH; return INVALID_CHARACTER; } // See *2
 
 %%
+// TODO: Maybe fix this (has a conflict with another rule) and add it again.
 // \".*\"      { MATCH return INVALID_CHARACTER; } // See *1 */
 // *1
 // This will match the whole or parts of incorrectly formatted strings.
