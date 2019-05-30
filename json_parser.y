@@ -49,9 +49,14 @@ JsonDB database;
 %token <AsText> F_USCREEN
 %token <AsText> F_ULOCATION
 %token <AsText> F_UID
+// Retweet tokens
+%token <AsText> F_RT_STATUS
+%token <AsText> F_RT_TWEET
+// Extended tweets tokens
 %token <AsText> F_ET_DECLARATION
 %token <AsText> F_ET_TRUNC
 %token <AsText> F_ET_DISPRANGE // Display text range
+
 
 
 // Custom field Data.
@@ -68,7 +73,8 @@ JsonDB database;
 %type <AsJArray> values
 %type <AsJObject> members
 
-
+// Special member is just a member but acts as a wrapper for the assignment specific rules.
+%type <AsJMember> special_member
 %%
 json: 
     value                       { 
@@ -93,7 +99,7 @@ value:
 
 object:
     '{' members '}'             { 
-                                    DBG("IsUser: " << $2->IsValidUser() << " IsOuter: " << $2->IsValidOuter())
+                                    DBG("IsUser: " << $2->IsValidUser() << " IsOuter: " << $2->IsValidOuterObject())
                                     $$ = $2;
                                 }
     | '{' '}'                   { $$ = new JObject(); }
@@ -105,8 +111,23 @@ members:
     ;
 
 member:
-    STRING ':' value              { $$ = new JMember($1, $3); }
-    | F_ID_STR ':' D_ID_STR       { 
+    STRING ':' value            { $$ = new JMember($1, $3); }
+    | special_member            { $$ = $1; }   
+    ;
+
+
+array:
+    '[' values ']'              { $$ = $2; }
+    | '[' ']'                   { $$ = new JArray(); }
+    ;
+
+values:
+    value                       { $$ = new JArray(); $$->AddValue($1); }
+    | value ',' values          { $$ = $3;           $$->AddValue($1); }
+    ;
+
+special_member:
+    F_ID_STR ':' D_ID_STR       { 
                                     if (database.MaybeInsertIdStr($3)) {
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::IdStr); 
                                     }
@@ -140,23 +161,47 @@ member:
                                     }
                                   }
     | F_USER ':' object           { 
-                                    if ($3->IsValidUser() || $3->IsValidRetweetUser()) {
+                                    if ($3->IsValidUser() || $3->HasValidScreenName()) {
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::User);
                                     }
                                     else {
-                                        parse.ReportError("User ending here is missing fields.");
+                                        parse.ReportError("User ending here is missing fields. "
+                                                          "All user objects must atleast include screen_name.");
                                         YYERROR;
                                     }
                                   }
+    | F_RT_STATUS ':' object    {
+                                    // A "retweet_status" does not always need a "tweet" object.
+                                    // but MUST have text and valid User Object
+                                    if (!$3->GenericMembers.Text || !$3->GenericMembers.User) {
+                                        parse.ReportError("Retweet status object ending here is invalid. "
+                                                          "It is missing 'text' and/or 'user' field." );
+                                        YYERROR;
+                                    }
 
-array:
-    '[' values ']'              { $$ = $2; }
-    | '[' ']'                   { $$ = new JArray(); }
-    ;
+                                    // if there is a 'tweet' object we need to verify the username from RT @
+                                    if ($3->TweetObjMember) {
 
-values:
-    value                       { $$ = new JArray(); $$->AddValue($1); }
-    | value ',' values          { $$ = $3;           $$->AddValue($1); }
+                                        // NOTE: Dont forget to derefrence the pointers. Otherwise you compare pointers not strings.
+                                        if (*$3->TweetObjMember->Value->Data.ObjectData->GetRetweetUser() != *$3->GetContainedUserScreenName()) { 
+                                            parse.ReportError("Retweet status object ending here is invalid. "
+                                                              "RT @ user is not the same as the original tweet user.");
+                                            YYERROR;
+                                        }
+                                    }
+                                    // All cases that did not YYERROR will just make an object.
+                                    $$ = new JMember($1, new JValue($3));
+                                }
+    | F_RT_TWEET ':' object     {
+                                    if ($3->IsValidTweet()) {
+                                        $$ = new JMember($1, new JValue($3), JSpecialMember::TweetObj);
+                                    }
+                                    else {
+                                        parse.ReportError("Tweet object ending here is invalid. "
+                                                          "Tweet objects require 'text' field starting with 'RT @Username', and a valid 'user'.");
+                                        YYERROR;
+                                    }
+                                }
     ;
 
 %%

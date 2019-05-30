@@ -63,6 +63,10 @@ id_str      \"[0-9]+\"
 "\"location\""     { MATCH; STORE_TXT; return F_ULOCATION; }
 "\"id\""           { MATCH; STORE_TXT; return F_UID; }
 
+"\"retweeted_status\"" { MATCH; STORE_TXT; return F_RT_STATUS; }
+"\"tweet\""            { MATCH; STORE_TXT; return F_RT_TWEET; }
+
+
 {id_str}    { MATCH; STORE_TXT; return D_ID_STR; }
 {date}      { MATCH; STORE_TXT; return D_DATE; }
 

@@ -54,7 +54,8 @@ enum class JSpecialMember {
     UName,
     UScreenName,
     ULocation,
-    UId
+    UId,
+    TweetObj,
 };
 
 // POD utility for storing a starting point of a hashtag and its text.
@@ -177,19 +178,15 @@ struct JUserMembers {
             && ULocation
             && UId;
     }
-
-    bool IsRetweetValid() const {
-        return UScreenName != nullptr;
-    }
 };
 
-struct JOuterMembers {
+struct JGenericMembers {
     JMember* IdStr;
     JMember* Text;
     JMember* CreatedAt;
     JMember* User;
 
-    JOuterMembers()
+    JGenericMembers()
         : IdStr(nullptr)
         , Text(nullptr)
         , CreatedAt(nullptr)
@@ -206,8 +203,9 @@ struct JOuterMembers {
 struct JObject {
     std::vector<JMember*> Members;
 
-    JOuterMembers OuterMembers;
+    JGenericMembers GenericMembers;
     JUserMembers UserMembers;
+    JMember* TweetObjMember;
 
     JObject() {}
 
@@ -220,29 +218,65 @@ struct JObject {
     void AddMember(JMember* member) {
         Members.push_back(member);
         switch(member->SpecialType) {
-            case JSpecialMember::IdStr:         OuterMembers.IdStr = member; break;
-            case JSpecialMember::Text:          OuterMembers.Text = member; break;
-            case JSpecialMember::CreatedAt:     OuterMembers.CreatedAt = member; break;
-            case JSpecialMember::User:          OuterMembers.User = member; break;
+            case JSpecialMember::IdStr:         GenericMembers.IdStr = member; break;
+            case JSpecialMember::Text:          GenericMembers.Text = member; break;
+            case JSpecialMember::CreatedAt:     GenericMembers.CreatedAt = member; break;
+            case JSpecialMember::User:          GenericMembers.User = member; break;
             case JSpecialMember::UName:         UserMembers.UName = member; break;
             case JSpecialMember::UScreenName:   UserMembers.UScreenName = member; break;
             case JSpecialMember::ULocation:     UserMembers.ULocation = member; break;
             case JSpecialMember::UId:           UserMembers.UId = member; break;
+            case JSpecialMember::TweetObj:      TweetObjMember = member; break;
             default:
                 break;
         }
+    }
+
+    // Utility getter that returns the data of "text" field of this object.
+    // this will return a valid ptr if and only if GenericMembers.Text is valid
+    JString* GetGenericText() const {
+        if (GenericMembers.Text) {
+            return GenericMembers.Text->Value->Data.StringData;
+        }
+        return nullptr;
     }
 
     bool IsValidUser() const {
         return UserMembers.IsValid(); 
     }
     
-    bool IsValidRetweetUser() const {
-        return UserMembers.IsRetweetValid(); 
+    bool HasValidScreenName() const {
+        return UserMembers.UScreenName != nullptr; 
     }
 
-    bool IsValidOuter() const {
-        return OuterMembers.IsValid();
+    bool IsValidOuterObject() const {
+        return GenericMembers.IsValid();
+    }
+
+    bool IsValidTweet() const {
+        // To be a valid "tweet" object we need at least valid "text" and "user" fields.
+        if (!GenericMembers.Text || !GenericMembers.User) {
+            return false;
+        }
+        // Now that we have them we also need to check if the text contains RT @.
+        // At this level we cannot check if the @Username is the correct username yet.
+        if (GetGenericText()->RetweetUser.empty()) {
+            return false;
+        }
+        return true;
+    }
+
+    // assumes this object has a valid retweet object.
+    std::string* GetRetweetUser() const {
+        return &GetGenericText()->RetweetUser;
+    }
+
+    // assumes this object has a valid "user" subobject with a "screen_name"
+    std::string* GetContainedUserScreenName() const {
+        // First get the contained "user" as JObject.
+        const JObject* IncludedUserObject = GenericMembers.User->Value->Data.ObjectData;
+        // From the contained "user" object grab the ScreenName as text
+        return &IncludedUserObject->UserMembers.UScreenName->Value->Data.StringData->Text;
     }
 };
 

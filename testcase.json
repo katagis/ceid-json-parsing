@@ -11,6 +11,37 @@
         "id_str": "944480690",
         "screen_name": "FloodSocial"
     },
+    "retweet_status_tests": [
+        {
+            "retweeted_status": {
+                "comment": "\nThis is an example what we assumed is a valid retweeted_status format.\nThe outer \"user->screen_name\" should be identical with the RT @ user for all the tweets.\n",
+                "text": "%Retweet these percent encoding tests! %00%20%2B%20%21%20%2C%20%%26%20%",
+                "user": {
+                    "screen_name": "EncodingTestDev"
+                },
+                "tweet": {
+                    "text": "RT @EncodingTestDev I did retweet this.",
+                    "user": {
+                        "screen_name": "xXxG0DoFd4rKn3sSxXx"
+                    }
+                }
+            }
+        },
+        {
+            "retweeted_status": {
+                "tweet": {
+                    "text": "RT @EncodingTestDev I did retweet this.",
+                    "user": {
+                        "screen_name": "xXxG0DoFd4rKn3sSxXx"
+                    }
+                },
+                "text": "%Retweet these percent encoding tests! %00%20%2B%20%21%20%2C%20%%26%20%",
+                "user": {
+                    "screen_name": "EncodingTestDev"
+                }
+            }
+        }
+    ],
     "extended_tweet": {
         "full_text": "Just another Extended Tweet with more than 140 characters, generated as a documentation example, showing that [\"truncated\": true] and the presence of an \"extended_tweet\" object with complete text and \"entities\" #documentation #parsingJSON #GeoTagged https://t.co/e9yhQTJSIA",
         "display_text_range": [
@@ -46,9 +77,7 @@
     "entities": {
         "hashtags": []
     },
-    "retweeted_status": {
-        
-    }
+    "cat": "Art by Blazej Kozlowski \u23f0\n  _\n  \\`*-.\n   )  _`-.\n  .  : `. .\n  : _   '  \\\n  ; *` _.   `*-._\n  `-.-'          `-.\n    ;       `       `.\n    :.       .        \\\n    . \\  .   :   .-'   .\n    '  `+.;  ;  '      :\n    :  '  |    ;       ;-.\n    ; '   : :`-:     _.`* ;\n .*' /  .*' ; .*`- +'  `*'\n `*-*   `*-*  `*-*'\n"
 }
 /*{
     "created_at": "Thu Apr 06 15:24:15 +0000 2017",
@@ -122,3 +151,5 @@
         }
     ]
 }*/
+
+
