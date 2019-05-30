@@ -72,7 +72,7 @@ std::ostream& JMember::Print(std::ostream& os, int indentation) const {
 
 std::ostream& JObject::Print(std::ostream& os, int indent) const {
     os << "{ "; 
-    for (auto it = Members.rbegin(); it != Members.rend(); ++it) {
+    for (auto it = Memberlist.rbegin(); it != Memberlist.rend(); ++it) {
         os << "\n"; 
         Indent(os, indent + 1);
         (*it)->Print(os, indent + 1);

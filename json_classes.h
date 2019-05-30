@@ -87,6 +87,8 @@ struct JString {
     bool IsRetweet() const;
 };
 
+
+
 struct JValue {
     JValueType Type;
     JValueData Data;
@@ -160,123 +162,93 @@ struct JMember {
         , SpecialType(type) {}
 };
 
-struct JUserMembers {
-    JMember* UName;
-    JMember* UScreenName;
-    JMember* ULocation;
-    JMember* UId;
 
-    JUserMembers()
-        : UName(nullptr)
+// A 'special' members struct that holds pointers to specific assignment dependant members
+// We don't save the actual metadata but pointers to the values directly
+// when any of these pointers are null it means the object does not contain that specific member at all
+//
+// eg: we only care about the actual JString of a member with name 'text' and we only accept JString as its value.
+struct JSpecialMembers {
+    JString* IdStr;
+    JString* Text;
+    JString* CreatedAt;
+    JObject* User;
+
+    JString* UName;
+    JString* UScreenName;
+    JString* ULocation;
+    long long* UId;
+
+    JObject* TweetObj;
+
+    JSpecialMembers()
+        : IdStr(nullptr)
+        , Text(nullptr)
+        , CreatedAt(nullptr)
+        , User(nullptr)
+        , UName(nullptr)
         , UScreenName(nullptr)
         , ULocation(nullptr)
         , UId(nullptr) {}
 
-    bool IsValid() const {
-        return UName 
-            && UScreenName
-            && ULocation
-            && UId;
-    }
-};
-
-struct JGenericMembers {
-    JMember* IdStr;
-    JMember* Text;
-    JMember* CreatedAt;
-    JMember* User;
-
-    JGenericMembers()
-        : IdStr(nullptr)
-        , Text(nullptr)
-        , CreatedAt(nullptr)
-        , User(nullptr) {}
-
-    bool IsValid() const {
+    bool FormsValidOuterObject() const {
         return IdStr
             && Text
             && User
             && CreatedAt;
     }
+
+    bool FormsValidUser(bool RequireAll = false) const {
+        if (RequireAll) {
+            return UName && UScreenName && ULocation && UId;
+        }
+        return UScreenName;
+    }
 };
 
 struct JObject {
-    std::vector<JMember*> Members;
-
-    JGenericMembers GenericMembers;
-    JUserMembers UserMembers;
-    JMember* TweetObjMember;
-
-    JObject() {}
-
-    JObject(std::vector<JMember*>& list) {
-        std::swap(Members, list);
-    }
+    std::vector<JMember*> Memberlist;
+    JSpecialMembers Members;
 
     std::ostream& Print(std::ostream& os, int indentation) const;
 
     void AddMember(JMember* member) {
-        Members.push_back(member);
+        // When adding a member if it is special we populate the specific Object Field with its data.
+        // the final (simplified) JObject outline looks something like this after we are done adding members.
+        // JObject 
+        //    Members[]           - A reversed list with all the members (used for printing output)
+        //    ...
+        //    IdStr = nullptr     - field 'IdStr' is not present in this object
+        //    Text = JStringData* - value of 'text' json field
+        //    User = JObject*     - value of 'user' json field
+        //    
+        Memberlist.push_back(member);
         switch(member->SpecialType) {
-            case JSpecialMember::IdStr:         GenericMembers.IdStr = member; break;
-            case JSpecialMember::Text:          GenericMembers.Text = member; break;
-            case JSpecialMember::CreatedAt:     GenericMembers.CreatedAt = member; break;
-            case JSpecialMember::User:          GenericMembers.User = member; break;
-            case JSpecialMember::UName:         UserMembers.UName = member; break;
-            case JSpecialMember::UScreenName:   UserMembers.UScreenName = member; break;
-            case JSpecialMember::ULocation:     UserMembers.ULocation = member; break;
-            case JSpecialMember::UId:           UserMembers.UId = member; break;
-            case JSpecialMember::TweetObj:      TweetObjMember = member; break;
+            case JSpecialMember::IdStr:         Members.IdStr       = member->Value->Data.StringData; break;
+            case JSpecialMember::Text:          Members.Text        = member->Value->Data.StringData; break;
+            case JSpecialMember::CreatedAt:     Members.CreatedAt   = member->Value->Data.StringData; break;
+            case JSpecialMember::User:          Members.User        = member->Value->Data.ObjectData; break;
+            case JSpecialMember::UName:         Members.UName       = member->Value->Data.StringData; break;
+            case JSpecialMember::UScreenName:   Members.UScreenName = member->Value->Data.StringData; break;
+            case JSpecialMember::ULocation:     Members.ULocation   = member->Value->Data.StringData; break;
+            case JSpecialMember::UId:           Members.UId         = &member->Value->Data.IntData; break;
+            case JSpecialMember::TweetObj:      Members.TweetObj    = member->Value->Data.ObjectData; break;
             default:
                 break;
         }
     }
 
-    // Utility getter that returns the data of "text" field of this object.
-    // this will return a valid ptr if and only if GenericMembers.Text is valid
-    JString* GetGenericText() const {
-        if (GenericMembers.Text) {
-            return GenericMembers.Text->Value->Data.StringData;
-        }
-        return nullptr;
-    }
-
-    bool IsValidUser() const {
-        return UserMembers.IsValid(); 
-    }
-    
-    bool HasValidScreenName() const {
-        return UserMembers.UScreenName != nullptr; 
-    }
-
-    bool IsValidOuterObject() const {
-        return GenericMembers.IsValid();
-    }
-
-    bool IsValidTweet() const {
+    bool IsValidTweetObj() const {
         // To be a valid "tweet" object we need at least valid "text" and "user" fields.
-        if (!GenericMembers.Text || !GenericMembers.User) {
+        if (!Members.Text || !Members.User) {
             return false;
         }
         // Now that we have them we also need to check if the text contains RT @.
         // At this level we cannot check if the @Username is the correct username yet.
-        if (GetGenericText()->RetweetUser.empty()) {
+        if (Members.Text->RetweetUser.empty()) {
             return false;
         }
         return true;
-    }
-
-    // assumes this object has a valid retweet object.
-    std::string* GetRetweetUser() const {
-        return &GetGenericText()->RetweetUser;
-    }
-
-    // assumes this object has a valid "user" subobject with a "screen_name"
-    std::string* GetContainedUserScreenName() const {
-        // First get the contained "user" as JObject.
-        const JObject* IncludedUserObject = GenericMembers.User->Value->Data.ObjectData;
-        // From the contained "user" object grab the ScreenName as text
-        return &IncludedUserObject->UserMembers.UScreenName->Value->Data.StringData->Text;
     }
 };
 

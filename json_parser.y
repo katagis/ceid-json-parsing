@@ -99,7 +99,7 @@ value:
 
 object:
     '{' members '}'             { 
-                                    DBG("IsUser: " << $2->IsValidUser() << " IsOuter: " << $2->IsValidOuterObject())
+                                    DBG("IsUser: " << $2->Members.FormsValidUser(true) << " IsOuter: " << $2->Members.FormsValidOuterObject())
                                     $$ = $2;
                                 }
     | '{' '}'                   { $$ = new JObject(); }
@@ -135,8 +135,8 @@ special_member:
                                         parse.ReportError("ID String already exists.");
                                         YYERROR;
                                     }
-                                  }
-    | F_TEXT ':' STRING           { 
+                                }
+    | F_TEXT ':' STRING         { 
                                     JString* str = new JString($3);
                                     if (str->Length <= 142) { // The length of the example in the forums was 142 instead of 140.
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::Text); 
@@ -146,12 +146,12 @@ special_member:
                                         std::cout << "Length: " << str->Text.length() << "|" << str->Length << "/140\n";
                                         YYERROR;
                                     }
-                                  }
-    | F_CREATEDAT ':' D_DATE      { $$ = new JMember($1, new JValue($3), JSpecialMember::CreatedAt); }
-    | F_UNAME ':' STRING          { $$ = new JMember($1, new JValue($3), JSpecialMember::UName); }
-    | F_USCREEN ':' STRING        { $$ = new JMember($1, new JValue($3), JSpecialMember::UScreenName); }
-    | F_ULOCATION ':' STRING      { $$ = new JMember($1, new JValue($3), JSpecialMember::ULocation); }
-    | F_UID ':' POS_INT           { 
+                                }
+    | F_CREATEDAT ':' D_DATE    { $$ = new JMember($1, new JValue($3), JSpecialMember::CreatedAt); }
+    | F_UNAME ':' STRING        { $$ = new JMember($1, new JValue($3), JSpecialMember::UName); }
+    | F_USCREEN ':' STRING      { $$ = new JMember($1, new JValue($3), JSpecialMember::UScreenName); }
+    | F_ULOCATION ':' STRING    { $$ = new JMember($1, new JValue($3), JSpecialMember::ULocation); }
+    | F_UID ':' POS_INT         { 
                                     if (database.MaybeInsertUserId($3)) {
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::UId); 
                                     }
@@ -159,9 +159,9 @@ special_member:
                                         parse.ReportError("User ID already exists.");
                                         YYERROR;
                                     }
-                                  }
-    | F_USER ':' object           { 
-                                    if ($3->IsValidUser() || $3->HasValidScreenName()) {
+                                }
+    | F_USER ':' object         { 
+                                    if ($3->Members.FormsValidUser(false)) {
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::User);
                                     }
                                     else {
@@ -169,31 +169,36 @@ special_member:
                                                           "All user objects must atleast include screen_name.");
                                         YYERROR;
                                     }
-                                  }
+                                }
     | F_RT_STATUS ':' object    {
                                     // A "retweet_status" does not always need a "tweet" object.
                                     // but MUST have text and valid User Object
-                                    if (!$3->GenericMembers.Text || !$3->GenericMembers.User) {
+                                    if (!$3->Members.Text || !$3->Members.User) {
                                         parse.ReportError("Retweet status object ending here is invalid. "
                                                           "It is missing 'text' and/or 'user' field." );
                                         YYERROR;
                                     }
 
                                     // if there is a 'tweet' object we need to verify the username from RT @
-                                    if ($3->TweetObjMember) {
+                                    if ($3->Members.TweetObj) {
+                                        
+                                        // "user"->"ScreenName"->Text
+                                        const std::string& OriginalTweetAuthor = $3->Members.User->Members.UScreenName->Text; 
 
-                                        // NOTE: Dont forget to derefrence the pointers. Otherwise you compare pointers not strings.
-                                        if (*$3->TweetObjMember->Value->Data.ObjectData->GetRetweetUser() != *$3->GetContainedUserScreenName()) { 
-                                            parse.ReportError("Retweet status object ending here is invalid. "
-                                                              "RT @ user is not the same as the original tweet user.");
+                                        // "tweet"->"text" [@User]
+                                        const std::string& RetweetAtFound = $3->Members.TweetObj->Members.Text->RetweetUser; 
+                                        
+                                        if (OriginalTweetAuthor != RetweetAtFound) { 
+                                            parse.ReportError("Retweet status object ending here is invalid. RT @ user '" + RetweetAtFound 
+                                                            + "' is not the same as the original tweet user. '" + OriginalTweetAuthor + "'");
                                             YYERROR;
                                         }
                                     }
-                                    // All cases that did not YYERROR will just make an object.
+                                    // this will only run if no YYERROR was run.
                                     $$ = new JMember($1, new JValue($3));
                                 }
     | F_RT_TWEET ':' object     {
-                                    if ($3->IsValidTweet()) {
+                                    if ($3->IsValidTweetObj()) {
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::TweetObj);
                                     }
                                     else {
