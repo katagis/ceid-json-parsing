@@ -39,8 +39,8 @@ JsonDB database;
 %token NULL_VAL
 %token INVALID_CHARACTER
 
-// Our custom field declarations. 
-// Programmatically they are text but we have some extra grammar for them.
+// Custom field declarations. 
+// Programmatically they are just text but we have some extra grammar for them.
 %token <AsText> F_ID_STR
 %token <AsText> F_TEXT
 %token <AsText> F_CREATEDAT
@@ -55,13 +55,18 @@ JsonDB database;
 // Extended tweets tokens
 %token <AsText> F_ET_DECLARATION
 %token <AsText> F_ET_TRUNC
-%token <AsText> F_ET_DISPRANGE // Display text range
+%token <AsText> F_ET_DISPLAYRANGE // Display text range
+%token <AsText> F_ET_ENTITIES
+%token <AsText> F_ET_HASHTAGS
+%token <AsText> F_ET_INDICIES
+%token <AsText> F_ET_FULLTEXT
 
 
 
 // Custom field Data.
 %token <AsText> D_ID_STR
 %token <AsText> D_DATE
+
 
 
 %type <AsJValue> value
@@ -75,6 +80,9 @@ JsonDB database;
 
 // Special member is just a member but acts as a wrapper for the assignment specific rules.
 %type <AsJMember> special_member
+
+// An array with just 2 ints. used as grammar rule to help parsing the array ranges for hastags and indices
+%type <AsJArray> special_intrange 
 %%
 json: 
     value                       { 
@@ -116,15 +124,22 @@ member:
     ;
 
 
+
+special_intrange: 
+    '[' POS_INT ',' POS_INT ']' { $$ = new JArray($2, $4); }
+    ;
+
 array:
     '[' values ']'              { $$ = $2; }
     | '[' ']'                   { $$ = new JArray(); }
+    | special_intrange          { $$ = $1; /* this rule produces conflict. todo*/}
     ;
 
 values:
     value                       { $$ = new JArray(); $$->AddValue($1); }
     | value ',' values          { $$ = $3;           $$->AddValue($1); }
     ;
+
 
 special_member:
     F_ID_STR ':' D_ID_STR       { 
@@ -207,6 +222,13 @@ special_member:
                                         YYERROR;
                                     }
                                 }
+    | F_ET_DECLARATION ':' object   { $$ = new JMember($1, new JValue($3), JSpecialMember::ExTweet); }
+    | F_ET_TRUNC ':' BOOL           { $$ = new JMember($1, new JValue($3), JSpecialMember::Truncated); }
+    | F_ET_DISPLAYRANGE ':' special_intrange { $$ = new JMember($1, new JValue($3), JSpecialMember::DisplayRange); }
+    | F_ET_ENTITIES ':' object      { $$ = new JMember($1, new JValue($3), JSpecialMember::Entities); }
+    | F_ET_HASHTAGS ':' array       { $$ = new JMember($1, new JValue($3), JSpecialMember::Hashtags); }
+    | F_ET_INDICIES ':' special_intrange { $$ = new JMember($1, new JValue($3), JSpecialMember::DisplayRange); }
+    | F_ET_FULLTEXT ':' STRING      { $$ = new JMember($1, new JValue($3), JSpecialMember::FullText); }
     ;
 
 %%

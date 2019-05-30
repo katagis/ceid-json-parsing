@@ -242,3 +242,43 @@ JString::JString(char* source) {
 bool JString::IsRetweet() const {
     return RetweetUser.length() > 0;
 }
+
+void JObject::AddMember(JMember* member) {
+    // When adding a member if it is special we populate the specific Object Field with its data.
+    // the final (simplified) JObject outline looks something like this after we are done adding members.
+    // JObject 
+    //    Members[]           - A reversed list with all the members (used for printing output)
+    //    ...
+    //    IdStr = nullptr     - field 'IdStr' is not present in this object
+    //    Text = JString*     - value of 'text' json field
+    //    User = JObject*     - value of 'user' json field
+    //    
+    Memberlist.push_back(member);
+    switch(member->SpecialType) {
+        case JSpecialMember::IdStr:         Members.IdStr       = member->Value->Data.StringData; break;
+        case JSpecialMember::Text:          Members.Text        = member->Value->Data.StringData; break;
+        case JSpecialMember::CreatedAt:     Members.CreatedAt   = member->Value->Data.StringData; break;
+        case JSpecialMember::User:          Members.User        = member->Value->Data.ObjectData; break;
+        case JSpecialMember::UName:         Members.UName       = member->Value->Data.StringData; break;
+        case JSpecialMember::UScreenName:   Members.UScreenName = member->Value->Data.StringData; break;
+        case JSpecialMember::ULocation:     Members.ULocation   = member->Value->Data.StringData; break;
+        case JSpecialMember::UId:           Members.UId         = &member->Value->Data.IntData; break;
+        case JSpecialMember::TweetObj:      Members.TweetObj    = member->Value->Data.ObjectData; break;
+        default:
+            SwitchOnExMember(member);
+    }
+}
+
+void JObject::SwitchOnExMember(JMember* member) {
+    switch(member->SpecialType) {
+        case JSpecialMember::ExTweet:       ExMembers.ExTweet       = member->Value->Data.ObjectData; break;
+        case JSpecialMember::Truncated:     ExMembers.Truncated     = &member->Value->Data.BoolData; break;
+        case JSpecialMember::DisplayRange:  ExMembers.DisplayRange  = &member->Value->Data.ArrayData->AsRange; break;
+        case JSpecialMember::Entities:      ExMembers.Entities      = member->Value->Data.ObjectData; break;
+        case JSpecialMember::Hashtags:      ExMembers.Hashtags      = member->Value->Data.ArrayData; break;
+        case JSpecialMember::Indicies:      ExMembers.Indicies      = &member->Value->Data.ArrayData->AsRange; break;
+        case JSpecialMember::FullText:      ExMembers.FullText      = member->Value->Data.StringData; break;
+    }
+}
+
+

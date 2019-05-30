@@ -45,6 +45,7 @@ union JValueData {
     ~JValueData() {};
 };
 
+// Special members are all the members required for the assignment.
 enum class JSpecialMember {
     None, // Not a special member
     IdStr,
@@ -55,7 +56,16 @@ enum class JSpecialMember {
     UScreenName,
     ULocation,
     UId,
+    // Assignment 2a
     TweetObj,
+    // Assignment 2b
+    ExTweet,
+    Truncated,
+    DisplayRange,
+    Entities,
+    Hashtags,
+    Indicies,
+    FullText
 };
 
 // POD utility for storing a starting point of a hashtag and its text.
@@ -137,13 +147,42 @@ struct JValue {
     }
 };
 
+// Utility for ranges: arrays with 2 ints
+struct JRange {
+    long long Begin;
+    long long End;
+
+    JRange()
+        : Begin(-1)
+        , End(-1) {}
+    
+    JRange(long long b, long long e)
+        : Begin(b)
+        , End(e) {}
+};
+
 struct JArray {
     std::vector<JValue*> Elements;
+    
+    JRange AsRange;
 
     JArray() {}
 
+    JArray(long long from, long long to)
+        : AsRange(from, to) {
+            // Watch out the order here...
+            // We 'emulate' our parsing and push back in reverse order.
+            Elements.push_back(new JValue(to));
+            Elements.push_back(new JValue(from));
+        }
+
     void AddValue(JValue* value) {
         Elements.push_back(value);
+    }
+
+    // Test an array to see if it is a valid "IntRange"
+    bool IsRange() const {
+        return AsRange.Begin >= 0;
     }
 
     std::ostream& Print(std::ostream& os, int indentation) const;
@@ -169,27 +208,17 @@ struct JMember {
 //
 // eg: we only care about the actual JString of a member with name 'text' and we only accept JString as its value.
 struct JSpecialMembers {
-    JString* IdStr;
-    JString* Text;
-    JString* CreatedAt;
-    JObject* User;
+    JString* IdStr = nullptr;
+    JString* Text = nullptr;
+    JString* CreatedAt = nullptr;
+    JObject* User = nullptr;
 
-    JString* UName;
-    JString* UScreenName;
-    JString* ULocation;
-    long long* UId;
+    JString* UName = nullptr;
+    JString* UScreenName = nullptr;
+    JString* ULocation = nullptr;
+    long long* UId = nullptr;
 
-    JObject* TweetObj;
-
-    JSpecialMembers()
-        : IdStr(nullptr)
-        , Text(nullptr)
-        , CreatedAt(nullptr)
-        , User(nullptr)
-        , UName(nullptr)
-        , UScreenName(nullptr)
-        , ULocation(nullptr)
-        , UId(nullptr) {}
+    JObject* TweetObj = nullptr;
 
     bool FormsValidOuterObject() const {
         return IdStr
@@ -206,37 +235,25 @@ struct JSpecialMembers {
     }
 };
 
+// Special members for extended tweets, same as above
+struct JExSpecialMembers {
+    JObject* ExTweet = nullptr;
+    bool* Truncated = nullptr;
+    JRange* DisplayRange = nullptr;
+    JObject* Entities = nullptr;
+    JArray* Hashtags = nullptr;
+    JRange* Indicies = nullptr;
+    JString* FullText = nullptr;
+
+
+};
+
 struct JObject {
     std::vector<JMember*> Memberlist;
     JSpecialMembers Members;
+    JExSpecialMembers ExMembers;
 
     std::ostream& Print(std::ostream& os, int indentation) const;
-
-    void AddMember(JMember* member) {
-        // When adding a member if it is special we populate the specific Object Field with its data.
-        // the final (simplified) JObject outline looks something like this after we are done adding members.
-        // JObject 
-        //    Members[]           - A reversed list with all the members (used for printing output)
-        //    ...
-        //    IdStr = nullptr     - field 'IdStr' is not present in this object
-        //    Text = JStringData* - value of 'text' json field
-        //    User = JObject*     - value of 'user' json field
-        //    
-        Memberlist.push_back(member);
-        switch(member->SpecialType) {
-            case JSpecialMember::IdStr:         Members.IdStr       = member->Value->Data.StringData; break;
-            case JSpecialMember::Text:          Members.Text        = member->Value->Data.StringData; break;
-            case JSpecialMember::CreatedAt:     Members.CreatedAt   = member->Value->Data.StringData; break;
-            case JSpecialMember::User:          Members.User        = member->Value->Data.ObjectData; break;
-            case JSpecialMember::UName:         Members.UName       = member->Value->Data.StringData; break;
-            case JSpecialMember::UScreenName:   Members.UScreenName = member->Value->Data.StringData; break;
-            case JSpecialMember::ULocation:     Members.ULocation   = member->Value->Data.StringData; break;
-            case JSpecialMember::UId:           Members.UId         = &member->Value->Data.IntData; break;
-            case JSpecialMember::TweetObj:      Members.TweetObj    = member->Value->Data.ObjectData; break;
-            default:
-                break;
-        }
-    }
 
     bool IsValidTweetObj() const {
         // To be a valid "tweet" object we need at least valid "text" and "user" fields.
@@ -250,6 +267,13 @@ struct JObject {
         }
         return true;
     }
+
+    // Add a member to the Memberlist and resolve if it needs to popule some Members.* or ExMembers.* field.
+    void AddMember(JMember* member);
+
+private:
+    // Use another function for all the ExMembers just for code readability
+    void SwitchOnExMember(JMember* member);
 };
 
 struct JJson {

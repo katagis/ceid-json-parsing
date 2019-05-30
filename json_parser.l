@@ -66,6 +66,15 @@ id_str      \"[0-9]+\"
 "\"retweeted_status\"" { MATCH; STORE_TXT; return F_RT_STATUS; }
 "\"tweet\""            { MATCH; STORE_TXT; return F_RT_TWEET; }
 
+"\"extended_tweet\""    { MATCH; STORE_TXT; return F_ET_DECLARATION; }
+"\"truncated\""         { MATCH; STORE_TXT; return F_ET_TRUNC; }
+"\"display_text_range\"" { MATCH; STORE_TXT; return F_ET_DISPLAYRANGE; }
+"\"entities\""          { MATCH; STORE_TXT; return F_ET_ENTITIES; }
+"\"hashtags\""          { MATCH; STORE_TXT; return F_ET_HASHTAGS; }
+"\"indicies\""          { MATCH; STORE_TXT; return F_ET_INDICIES; }
+"\"full_text\""         { MATCH; STORE_TXT; return F_ET_FULLTEXT; }
+
+
 
 {id_str}    { MATCH; STORE_TXT; return D_ID_STR; }
 {date}      { MATCH; STORE_TXT; return D_DATE; }
