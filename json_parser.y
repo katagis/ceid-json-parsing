@@ -49,6 +49,10 @@ JsonDB database;
 %token <AsText> F_USCREEN
 %token <AsText> F_ULOCATION
 %token <AsText> F_UID
+%token <AsText> F_ET_DECLARATION
+%token <AsText> F_ET_TRUNC
+%token <AsText> F_ET_DISPRANGE // Display text range
+
 
 // Custom field Data.
 %token <AsText> D_ID_STR
@@ -111,7 +115,17 @@ member:
                                         YYERROR;
                                     }
                                   }
-    | F_TEXT ':' STRING           { $$ = new JMember($1, new JValue($3), JSpecialMember::Text); }
+    | F_TEXT ':' STRING           { 
+                                    JString* str = new JString($3);
+                                    if (str->Length <= 142) { // The length of the example in the forums was 142 instead of 140.
+                                        $$ = new JMember($1, new JValue($3), JSpecialMember::Text); 
+                                    }
+                                    else {
+                                        parse.ReportError("This text field is too long.");
+                                        std::cout << "Length: " << str->Text.length() << "|" << str->Length << "/140\n";
+                                        YYERROR;
+                                    }
+                                  }
     | F_CREATEDAT ':' D_DATE      { $$ = new JMember($1, new JValue($3), JSpecialMember::CreatedAt); }
     | F_UNAME ':' STRING          { $$ = new JMember($1, new JValue($3), JSpecialMember::UName); }
     | F_USCREEN ':' STRING        { $$ = new JMember($1, new JValue($3), JSpecialMember::UScreenName); }
@@ -126,7 +140,7 @@ member:
                                     }
                                   }
     | F_USER ':' object           { 
-                                    if ($3->IsValidUser()) {
+                                    if ($3->IsValidUser() || $3->IsValidRetweetUser()) {
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::User);
                                     }
                                     else {

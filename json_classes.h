@@ -159,7 +159,6 @@ struct JMember {
         , SpecialType(type) {}
 };
 
-
 struct JUserMembers {
     JMember* UName;
     JMember* UScreenName;
