@@ -71,7 +71,7 @@ id_str      \"[0-9]+\"
 "\"display_text_range\"" { MATCH; STORE_TXT; return F_ET_DISPLAYRANGE; }
 "\"entities\""          { MATCH; STORE_TXT; return F_ET_ENTITIES; }
 "\"hashtags\""          { MATCH; STORE_TXT; return F_ET_HASHTAGS; }
-"\"indicies\""          { MATCH; STORE_TXT; return F_ET_INDICIES; }
+"\"indices\""           { MATCH; STORE_TXT; return F_ET_INDICES; }
 "\"full_text\""         { MATCH; STORE_TXT; return F_ET_FULLTEXT; }
 
 

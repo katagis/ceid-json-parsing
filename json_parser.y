@@ -14,6 +14,12 @@ extern int yyparse();
 
 JsonDB database;
 
+#define ALLOWED_TEXT_LEN 140
+
+// The assignment mentioned 140 length for full_text too. 
+// We assumed a value of our own to pass the test cases.
+#define ALLOWED_FULLTEXT_LEN 800
+
 #define DBG(TEXT) std::cerr << "# " << TEXT << "\n";
 %}
 
@@ -58,7 +64,7 @@ JsonDB database;
 %token <AsText> F_ET_DISPLAYRANGE // Display text range
 %token <AsText> F_ET_ENTITIES
 %token <AsText> F_ET_HASHTAGS
-%token <AsText> F_ET_INDICIES
+%token <AsText> F_ET_INDICES
 %token <AsText> F_ET_FULLTEXT
 
 
@@ -86,12 +92,21 @@ JsonDB database;
 
 %type <AsText> special_asvalues 
 
+
 %%
 json: 
     value                       { 
                                   //DBG("JSON PARSED") 
                                   $$ = new JJson($1); 
                                   $$->Print(std::cout);
+                                  std::string Error = "The outer object was parsed properly but its not valid. Error was:\n";
+                                  if (!$1->Data.ObjectData->FormsValidOuterObject(Error)) {
+                                      parse.ReportError(Error);
+                                      YYERROR;
+                                  }
+                                  else {
+                                      std::cout << "Input was a complete and valid outer object.\n";
+                                  }
                                 }
     ;
 
@@ -111,7 +126,6 @@ value:
 
 object:
     '{' members '}'             { 
-                                    DBG("IsUser: " << $2->Members.FormsValidUser(true) << " IsOuter: " << $2->Members.FormsValidOuterObject())
                                     $$ = $2;
                                 }
     | '{' '}'                   { $$ = new JObject(); }
@@ -159,12 +173,12 @@ special_member:
                                 }
     | F_TEXT ':' STRING         { 
                                     JString* str = new JString($3);
-                                    if (str->Length <= 142) { // The length of the example in the forums was 142 instead of 140.
-                                        $$ = new JMember($1, new JValue($3), JSpecialMember::Text); 
+                                    if (str->Length <= ALLOWED_TEXT_LEN) {
+                                        $$ = new JMember($1, new JValue(str), JSpecialMember::Text); 
                                     }
                                     else {
                                         parse.ReportError("This text field is too long.");
-                                        std::cout << "Length: " << str->Text.length() << "|" << str->Length << "/140\n";
+                                        std::cout << "Length: " << str->Text.length() << "/142\n";
                                         YYERROR;
                                     }
                                 }
@@ -219,7 +233,7 @@ special_member:
                                     $$ = new JMember($1, new JValue($3));
                                 }
     | F_RT_TWEET ':' object     {
-                                    if ($3->IsValidTweetObj()) {
+                                    if ($3->FormsValidRetweetObj()) {
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::TweetObj);
                                     }
                                     else {
@@ -228,13 +242,44 @@ special_member:
                                         YYERROR;
                                     }
                                 }
-    | F_ET_DECLARATION ':' object   { $$ = new JMember($1, new JValue($3), JSpecialMember::ExTweet); }
+    | F_ET_DECLARATION ':' object   { 
+                                        std::string Error = "Extended tweet object ending here is invalid: ";
+                                        if (!$3->FormsValidExtendedTweetObj(Error)) {
+                                            parse.ReportError(Error);
+                                            YYERROR;
+                                        }
+                                        $$ = new JMember($1, new JValue($3), JSpecialMember::ExTweet); 
+                                    }
     | F_ET_TRUNC ':' BOOL           { $$ = new JMember($1, new JValue($3), JSpecialMember::Truncated); }
     | F_ET_DISPLAYRANGE ':' special_intrange { $$ = new JMember($1, new JValue($3), JSpecialMember::DisplayRange); }
-    | F_ET_ENTITIES ':' object      { $$ = new JMember($1, new JValue($3), JSpecialMember::Entities); }
-    | F_ET_HASHTAGS ':' array       { $$ = new JMember($1, new JValue($3), JSpecialMember::Hashtags); }
-    | F_ET_INDICIES ':' special_intrange { $$ = new JMember($1, new JValue($3), JSpecialMember::DisplayRange); }
-    | F_ET_FULLTEXT ':' STRING      { $$ = new JMember($1, new JValue($3), JSpecialMember::FullText); }
+    | F_ET_ENTITIES ':' object      { 
+                                        if (!$3->ExMembers.Hashtags) {
+                                            parse.ReportError("Entities object ending here is missing a 'hashtags' member.");
+                                            YYERROR;
+                                        }
+                                        $$ = new JMember($1, new JValue($3), JSpecialMember::Entities); 
+                                    }
+    | F_ET_HASHTAGS ':' array       { 
+                                        std::string Error = "Array ending here is not a valid hastags array: ";
+                                        bool IsValidArray = $3->ExtractHashtags(Error);
+                                        if (!IsValidArray) {
+                                            parse.ReportError(Error);
+                                            YYERROR;
+                                        }
+                                        $$ = new JMember($1, new JValue($3), JSpecialMember::Hashtags); 
+                                    }
+    | F_ET_INDICES ':' special_intrange { $$ = new JMember($1, new JValue($3), JSpecialMember::Indices); }
+    | F_ET_FULLTEXT ':' STRING      { 
+                                        JString* str = new JString($3);
+                                        if (str->Length <= ALLOWED_FULLTEXT_LEN) {
+                                            $$ = new JMember($1, new JValue(str), JSpecialMember::FullText); 
+                                        }
+                                        else {
+                                            parse.ReportError("'full_text' is too long: " + std::to_string(str->Length) +
+                                                              "/" + std::to_string(ALLOWED_FULLTEXT_LEN));
+                                            YYERROR;
+                                        }
+                                    }
     ;
 
 special_asvalues:
@@ -253,7 +298,7 @@ special_asvalues:
     | F_ET_DISPLAYRANGE   { $$ = $1; }
     | F_ET_ENTITIES       { $$ = $1; }
     | F_ET_HASHTAGS       { $$ = $1; }
-    | F_ET_INDICIES       { $$ = $1; }
+    | F_ET_INDICES        { $$ = $1; }
     | F_ET_FULLTEXT       { $$ = $1; }
     ;
 

@@ -2,6 +2,7 @@
 #include <ostream>
 #include <iomanip>
 #include <codecvt>
+#include <algorithm>
 
 void Indent(std::ostream& os, int num) {
     os << std::string(num * 2, ' ');
@@ -193,9 +194,9 @@ JString::JString(char* source) {
             // Hashtag begins here.
             HashTagData hashtag;
             char *readptr = &source[i+1];
-            while((*readptr > 'a' && *readptr < 'z') || // Allow a-z
-                  (*readptr > 'A' && *readptr < 'Z') || // Allow A-Z
-                  (*readptr > '0' && *readptr < '9') || // Allow 0-9
+            while((*readptr >= 'a' && *readptr <= 'z') || // Allow a-z
+                  (*readptr >= 'A' && *readptr <= 'Z') || // Allow A-Z
+                  (*readptr >= '0' && *readptr <= '9') || // Allow 0-9
                   *readptr == '_')  // Allow underscore
             {                                           // Everything else stops the hashtag
                 hashtag.Tag.push_back(*readptr);
@@ -204,7 +205,8 @@ JString::JString(char* source) {
             
             if (hashtag.Tag.length() > 0) {
                 // We have a valid hashtag.
-                hashtag.BeginByte = i; // conatins the '#' param
+                // Assumes indices count escaped sequences as 1 character. (eg: "text"="/u2330 #abc" starts at 2)
+                hashtag.Begin = Length; // conatins the '#' param
                 Hashtags.push_back(hashtag);
             } // the rest of the code works both for empty or non-empty TempHashtag
 
@@ -276,9 +278,159 @@ void JObject::SwitchOnExMember(JMember* member) {
         case JSpecialMember::DisplayRange:  ExMembers.DisplayRange  = &member->Value->Data.ArrayData->AsRange; break;
         case JSpecialMember::Entities:      ExMembers.Entities      = member->Value->Data.ObjectData; break;
         case JSpecialMember::Hashtags:      ExMembers.Hashtags      = member->Value->Data.ArrayData; break;
-        case JSpecialMember::Indicies:      ExMembers.Indicies      = &member->Value->Data.ArrayData->AsRange; break;
+        case JSpecialMember::Indices:      ExMembers.Indices      = &member->Value->Data.ArrayData->AsRange; break;
         case JSpecialMember::FullText:      ExMembers.FullText      = member->Value->Data.StringData; break;
     }
 }
 
+bool JObject::FormsValidRetweetObj() const {
+    // To be a valid "tweet" object we need at least valid "text" and "user" fields.
+    if (!Members.Text || !Members.User) {
+        return false;
+    }
+    // Now that we have them we also need to check if the text contains RT @.
+    // At this level we cannot check if the @Username is the correct username yet.
+    if (Members.Text->RetweetUser.empty()) {
+        return false;
+    }
+    return true;
+}
 
+bool JObject::FormsValidOuterObject(std::string& FailMessage) const {
+    
+    // Our outer object MUST include IdStr, Text, User, Date.
+    if (!Members.IdStr || !Members.Text || !Members.User || !Members.CreatedAt) {
+        FailMessage += "Missing field IdStr/Text/User/CreatedAt";
+        return false;
+    }
+
+    // if we dont find a truncated value or found one that == false we are done.
+    if (!ExMembers.Truncated || *ExMembers.Truncated == false) {
+        return true;
+    }
+
+    // Otherwise truncated = true so the object MUST include:
+    // * a valid display_text_range [0, Members.Text.Length]
+    // * an exteneded tweet object 
+
+    if (!ExMembers.DisplayRange) {
+        FailMessage += "Missing display range when truncated == true.";
+        return false;
+    }
+
+    // The display range must be from x->x+Length and x+Length must be less than 
+    unsigned int TextSize = Members.Text->Length;
+    if (ExMembers.DisplayRange->Begin != 0 ||
+        ExMembers.DisplayRange->End != TextSize) {
+
+        FailMessage += "Display Range did not match the given text.";
+        return false;
+    }
+
+    // Finally check for the extended tweet object. 
+    if (!ExMembers.ExTweet) {
+        FailMessage += "Missing extended tweet when truncated == true.";
+        return false;
+    }
+
+    // We found an ExTweet. 
+    // This cannot be invalid since it has been already checked it was first parsed.
+    
+    // All required fields have been found and validated.
+    return true;
+}
+
+bool JObject::FormsValidExtendedTweetObj(std::string& FailMessage) const {
+
+    // Require full_text and display range.
+    if (!ExMembers.FullText || !ExMembers.DisplayRange) {
+        FailMessage += "Missing 'full_text' and/or 'display_text_range'.";
+        return false;
+    }
+
+    // Validate text length with display range
+    unsigned int TextSize = ExMembers.FullText->Length;
+    if (ExMembers.DisplayRange->Begin != 0 ||
+        ExMembers.DisplayRange->End != TextSize) {
+
+        FailMessage += "Display Range did not match the given full_text.\nText Size:" + std::to_string(TextSize)
+            + " DisplayRange: " + std::to_string(ExMembers.DisplayRange->Begin) 
+            + "," + std::to_string(ExMembers.DisplayRange->End);
+
+        return false;
+    }
+    
+    const JString& TextObj = *ExMembers.FullText;
+
+    // Even if we have NO hashtags in the text, we still need to verify that
+    // there are no recorded hashtags in the array (but only if one exists.)
+
+    int HashtagsInArray = 0;
+    if (ExMembers.Entities) {
+        HashtagsInArray = ExMembers.Entities->ExMembers.Hashtags->Hashtags.size();
+    }
+
+    if (HashtagsInArray != TextObj.Hashtags.size()) {
+        FailMessage += "Hashtags found in text did not match all the hashtags in the entites.";
+        return false;
+    }
+
+    // Hashtag count was equal. If it is also 0 then this is a valid extended_tweet
+    if (HashtagsInArray == 0) {
+        return true;
+    }
+
+    // The hashtags found in the entities array.
+    std::vector<HashTagData>& Tags = ExMembers.Entities->ExMembers.Hashtags->Hashtags;
+
+    // All that is left is to verify hashtag positions on the actual text.
+    // The hash tags could be in random order so do N^2 for now. 
+    // TODO: this could be optimized by using unordered_sets instead of vectors
+    for (const HashTagData& Outer : TextObj.Hashtags) {
+        if (std::find(Tags.cbegin(), Tags.cend(), Outer) == Tags.cend()) {
+            FailMessage += "Hashtag: '" + Outer.Tag + "' is missing from the entities array or has"
+                + " incorrect Indices.";
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool JArray::ExtractHashtags(std::string& Error) {
+    // This array must ONLY include objects that contain 'text', 'indices'
+    // the array can be empty.
+    // Actual checking for hashtag locations cannot be performed at this stage
+    
+    for (JValue* Element : Elements) {
+        // Must be an object type
+        if (Element->Type != JValueType::Object) {
+            Error += "An element of the array is not an object.";
+            return false;
+        }
+
+        // Now check this object to find if it includes "text" & "indices" they are required.
+        JObject* Subobject = Element->Data.ObjectData;
+        if (!Subobject->Members.Text || !Subobject->ExMembers.Indices) {
+            Error += "An element of the array is missing 'text' and/or 'indices'.";
+            return false;
+        }
+
+        // Also validate indice length. The actual # is not included in the text but it is accounted in indice length
+        // Therefore we need to offset the length by 1
+        long long IndiceLength = Subobject->ExMembers.Indices->End - Subobject->ExMembers.Indices->Begin;
+        if (IndiceLength != Subobject->Members.Text->Length + 1) {
+            Error += "Indice range did not match the text length.";
+            return false;
+
+        }
+
+        // Everything is correct. Collect this result and add it to the hashtags vector.
+        HashTagData Data;
+        Data.Tag = Subobject->Members.Text->Text;
+        Data.Begin = Subobject->ExMembers.Indices->Begin;
+
+        Hashtags.push_back(Data);
+    }
+    return true;
+}

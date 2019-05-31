@@ -1,7 +1,7 @@
 {
     "created_at": "Thu May 10 17:41:57 +0000 2018",
     "id_str": "994633657141813248",
-    "text": "Jus\\ another Extended Tweet with more than 140 characters, generated as a documentation example, showing that [\"tru… https://t.co/U7Se4NM7Eu",
+    "text": "Jus\\ another Extended Tweet with more than 140 characters, generated as a documentation example, showing that [\"tru\u2026 https://t.co/U7Se4NM7Eu",
     "display_text_range": [
         0,
         140
@@ -46,7 +46,7 @@
         "full_text": "Just another Extended Tweet with more than 140 characters, generated as a documentation example, showing that [\"truncated\": true] and the presence of an \"extended_tweet\" object with complete text and \"entities\" #documentation #parsingJSON #GeoTagged https://t.co/e9yhQTJSIA",
         "display_text_range": [
             0,
-            249
+            273
         ],
         "entities": {
             "hashtags": [
@@ -79,77 +79,3 @@
     },
     "cat": "Art by Blazej Kozlowski \u23f0\n  _\n  \\`*-.\n   )  _`-.\n  .  : `. .\n  : _   '  \\\n  ; *` _.   `*-._\n  `-.-'          `-.\n    ;       `       `.\n    :.       .        \\\n    . \\  .   :   .-'   .\n    '  `+.;  ;  '      :\n    :  '  |    ;       ;-.\n    ; '   : :`-:     _.`* ;\n .*' /  .*' ; .*`- +'  `*'\n `*-*   `*-*  `*-*'\n"
 }
-/*{
-    "created_at": "Thu Apr 06 15:24:15 +0000 2017",
-    "id_str": "850006245121695744",
-    "text": "1\/ Today we\u2019re sharing our vision for the future of the Twitter API platform!\nhttps:\/\/t.co\/XweGngmxlP",
-    "user": {
-        "id": 2244994945,
-        "name": "Twitter Dev",
-        "screen_name": "TwitterDev",
-        "location": "Internet",
-        "url": "https:\/\/dev.twitter.com\/",
-        "description": "Your official source for Twitter Platform news, updates & events. Need technical help? Visit https:\/\/twittercommunity.com\/ \u2328\ufe0f #TapIntoTwitter"
-    },
-    "place": {},
-    "entities": {
-        "hashtags": [],
-        "urls": [
-            {
-                "url": "https:\/\/t.co\/XweGngmxlP",
-                "unwound": {
-                    "url": "https:\/\/cards.twitter.com\/cards\/18ce53wgo4h\/3xo1c",
-                    "title": "Building the Future of the Twitter API Platform"
-                }
-            }
-        ],
-        "user_mentions": []
-    }
-}
-/*
-{
-    
-    "myname": {
-        "object": true
-    },
-    "myarray": [
-        [
-            ""
-        ],
-        "Escape Quote \" DoubleSlash \\ | OtherSlash \/ | NewLine \n Unicode 2328: \u2328 Unicode fe0f: \ufe0f",
-        "myval",
-        0.1212,
-        123,
-        true,
-        false,
-        null,
-        {
-            "asdf": {
-                "asdf": [
-                    1,
-                    2,
-                    3,
-                    4,
-                    5,
-                    6,
-                    7,
-                    null
-                ]
-            },
-            "asdf2": {
-                "asdf3": [
-                    1,
-                    2,
-                    3,
-                    4,
-                    5,
-                    6,
-                    7,
-                    null
-                ]
-            }
-        }
-    ]
-}*/
-
-

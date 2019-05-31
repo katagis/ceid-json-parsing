@@ -64,17 +64,21 @@ enum class JSpecialMember {
     DisplayRange,
     Entities,
     Hashtags,
-    Indicies,
+    Indices,
     FullText
 };
 
 // POD utility for storing a starting point of a hashtag and its text.
 struct HashTagData {
     std::string Tag;
-    unsigned int BeginByte;
+    unsigned int Begin;
 
-    unsigned int GetEndByte() const {
-        return BeginByte + Tag.length() + 1; // offset the '#' character
+    unsigned int GetEnd() const {
+        return Begin + Tag.length() + 1; // offset the '#' character
+    }
+
+    bool operator==(const HashTagData& other) const {
+       return Begin == other.Begin && Tag == other.Tag;
     }
 };
 
@@ -163,8 +167,10 @@ struct JRange {
 
 struct JArray {
     std::vector<JValue*> Elements;
-    
     JRange AsRange;
+
+    // this is only used if this is a hashtag array.
+    std::vector<HashTagData> Hashtags;
 
     JArray() {}
 
@@ -186,6 +192,10 @@ struct JArray {
     }
 
     std::ostream& Print(std::ostream& os, int indentation) const;
+
+    // Attempts to exract and populate the Hashtags vector from the elements.
+    // Returns true if this array forms a valid "hashtags" array. 
+    bool ExtractHashtags(std::string& Error);
 };
 
 struct JMember {
@@ -220,13 +230,6 @@ struct JSpecialMembers {
 
     JObject* TweetObj = nullptr;
 
-    bool FormsValidOuterObject() const {
-        return IdStr
-            && Text
-            && User
-            && CreatedAt;
-    }
-
     bool FormsValidUser(bool RequireAll = false) const {
         if (RequireAll) {
             return UName && UScreenName && ULocation && UId;
@@ -242,10 +245,8 @@ struct JExSpecialMembers {
     JRange* DisplayRange = nullptr;
     JObject* Entities = nullptr;
     JArray* Hashtags = nullptr;
-    JRange* Indicies = nullptr;
+    JRange* Indices = nullptr;
     JString* FullText = nullptr;
-
-
 };
 
 struct JObject {
@@ -255,21 +256,19 @@ struct JObject {
 
     std::ostream& Print(std::ostream& os, int indentation) const;
 
-    bool IsValidTweetObj() const {
-        // To be a valid "tweet" object we need at least valid "text" and "user" fields.
-        if (!Members.Text || !Members.User) {
-            return false;
-        }
-        // Now that we have them we also need to check if the text contains RT @.
-        // At this level we cannot check if the @Username is the correct username yet.
-        if (Members.Text->RetweetUser.empty()) {
-            return false;
-        }
-        return true;
-    }
+    
+    bool FormsValidRetweetObj() const;
 
     // Add a member to the Memberlist and resolve if it needs to popule some Members.* or ExMembers.* field.
     void AddMember(JMember* member);
+
+    // Checks if this JObject forms a valid "outer" object 
+    // ie MUST have text, valid user, IdStr, date AND extra if truncated = true
+    bool FormsValidOuterObject(std::string& FailMessage) const;
+    
+    // Checks if this JObject forms a valid "extended tweet" object
+    // extended tweet MUST include valid hashtags as entities if there are any.
+    bool FormsValidExtendedTweetObj(std::string& FailMessage) const;
 
 private:
     // Use another function for all the ExMembers just for code readability
