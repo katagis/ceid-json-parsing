@@ -83,6 +83,9 @@ JsonDB database;
 
 // An array with just 2 ints. used as grammar rule to help parsing the array ranges for hastags and indices
 %type <AsJArray> special_intrange 
+
+%type <AsText> special_asvalues 
+
 %%
 json: 
     value                       { 
@@ -103,6 +106,7 @@ value:
     | NULL_VAL                  { $$ = new JValue();   }
     | D_DATE                    { $$ = new JValue($1); }
     | D_ID_STR                  { $$ = new JValue($1); }
+    | special_asvalues          { $$ = new JValue($1); }
     ;
 
 object:
@@ -123,16 +127,9 @@ member:
     | special_member            { $$ = $1; }   
     ;
 
-
-
-special_intrange: 
-    '[' POS_INT ',' POS_INT ']' { $$ = new JArray($2, $4); }
-    ;
-
 array:
     '[' values ']'              { $$ = $2; }
     | '[' ']'                   { $$ = new JArray(); }
-    | special_intrange          { $$ = $1; /* this rule produces conflict. todo*/}
     ;
 
 values:
@@ -140,6 +137,15 @@ values:
     | value ',' values          { $$ = $3;           $$->AddValue($1); }
     ;
 
+special_intrange: 
+    '[' POS_INT ',' POS_INT ']' { 
+                                    if ($2 > $4) {
+                                        parse.ReportError("In the range ending here: Begin > End.");
+                                        YYERROR;
+                                    }
+                                    $$ = new JArray($2, $4); 
+                                }
+    ;
 
 special_member:
     F_ID_STR ':' D_ID_STR       { 
@@ -229,6 +235,26 @@ special_member:
     | F_ET_HASHTAGS ':' array       { $$ = new JMember($1, new JValue($3), JSpecialMember::Hashtags); }
     | F_ET_INDICIES ':' special_intrange { $$ = new JMember($1, new JValue($3), JSpecialMember::DisplayRange); }
     | F_ET_FULLTEXT ':' STRING      { $$ = new JMember($1, new JValue($3), JSpecialMember::FullText); }
+    ;
+
+special_asvalues:
+    F_ID_STR              { $$ = $1; }
+    | F_TEXT              { $$ = $1; }
+    | F_CREATEDAT         { $$ = $1; }
+    | F_UNAME             { $$ = $1; }
+    | F_USCREEN           { $$ = $1; }
+    | F_ULOCATION         { $$ = $1; }
+    | F_UID               { $$ = $1; }
+    | F_USER              { $$ = $1; }
+    | F_RT_STATUS         { $$ = $1; }
+    | F_RT_TWEET          { $$ = $1; }
+    | F_ET_DECLARATION    { $$ = $1; }
+    | F_ET_TRUNC          { $$ = $1; }
+    | F_ET_DISPLAYRANGE   { $$ = $1; }
+    | F_ET_ENTITIES       { $$ = $1; }
+    | F_ET_HASHTAGS       { $$ = $1; }
+    | F_ET_INDICIES       { $$ = $1; }
+    | F_ET_FULLTEXT       { $$ = $1; }
     ;
 
 %%
