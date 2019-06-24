@@ -20,14 +20,16 @@ ParserState parse;
 #define BRACE_OPEN  '{'
 
 // Use everywhere to report the parse match to our parser state
+// the parser state automatically appends this to its internal buffers for lines to allow for
+// the "pretty" error messages.
 #define MATCH parse.Match(yytext)
+// Used to store the text of our special string values.
 #define STORE_TXT yylval.AsText = util::MakeString(yytext)
 
-// The string matcher extracts the whole quoted strings without doing any processing.
-// The result is given to util::MakeString which in turn replaces all the character escapes
-// This makes our grammar rules a lot simpler as we never have to mix strings
-
-//date        "\"{literaldays} {literalmonths} {numerday} {time} ({timezone} )?{year}\""
+// The string matcher checks for escaped characters validility and then 
+// extracts the whole quoted strings without doing any processing.
+// The result is given as is to grammar rules and the escapes are parsed there.
+// This makes our grammar rules a lot simpler as we never have to mix strings.
 %}
 
 float   -?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?
@@ -49,9 +51,6 @@ year            [0-9]{4}
 date        \"{literaldays}[ ]{literalmonths}[ ]{numerday}[ ]{time}[ ]({timezone}[ ])?{year}\"
 
 id_str      \"[0-9]+\"
-
-
-
 %%
 
 "\"id_str\""       { MATCH; STORE_TXT; return F_ID_STR; }
@@ -95,16 +94,10 @@ id_str      \"[0-9]+\"
 {space}     { MATCH; parse.Match(yytext); }; // Consume all whitespaces
 {newline}   {      ; parse.CountLine(); }
 
-{errchar}   { MATCH; return INVALID_CHARACTER; } // See *2
+{errchar}   { MATCH; return INVALID_CHARACTER; } // See *1
 
 %%
-// TODO: Maybe fix this (has a conflict with another rule) and add it again.
-// \".*\"      { MATCH return INVALID_CHARACTER; } // See *1 */
 // *1
-// This will match the whole or parts of incorrectly formatted strings.
-// Even if the exact error is not shown its better than no match at all.
-// 
-// *2
 // This will match invalid characters not in quotes.
 //
 // The other option for error reporing would be to make a rule for INVALID_CHARACTER in grammar

@@ -52,14 +52,14 @@ std::ostream& JValue::Print(std::ostream& os, int indent) const {
 }
 
 std::ostream& JArray::Print(std::ostream& os, int indent) const {
-    os << "[ "; 
-    for (auto it = Elements.rbegin(); it != Elements.rend(); ++it) {
+    os << "[ "; // Print [ to  os (output stream)
+    for (JValue* el : Elements) { // for each element as el
         os << "\n"; 
-        Indent(os, indent + 1);
-        (*it)->Print(os, indent + 1);
+        Indent(os, indent + 1);    // add (indent + 1) * \t tab characters
+        el->Print(os, indent + 1); // call print for value at indent + 1
         os << ",";
     }
-    os << "\b \n";
+    os << "\b \n"; // backspace last comma
     Indent(os, indent);
     os << "]"; 
     return os;

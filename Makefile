@@ -22,9 +22,10 @@ all:
 	$(_IN_BUILD) $(COMPILER) -c json_classes.cpp $(WARNINGS)
 	$(_IN_BUILD) $(COMPILER) -c y.tab.c lex.yy.c $(WARNINGS)
 	$(_IN_BUILD) $(COMPILER) y.tab.o lex.yy.o json_classes.o -o parser $(WARNINGS)
+	cp build/parser ./parser.out
 
 test: all
-	$(BUILD_DIR)/parser testcase.json
+	./parser.out testcase.json
 
 clean:
 	rm $(BUILD_DIR) -rf

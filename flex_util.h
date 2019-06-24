@@ -13,8 +13,10 @@ struct ParserState {
     // The line number we are currently parsing.
     int LineNum = 0;
 
-    // The contents of the last line we parsed. 
+    // The contents of the everything we have parsed so far, by line.
     std::vector<std::string> LineTexts = { "" };
+
+    // The last token flex parsed.
     std::string LastMatch = "";
 
     // Once we found a \n
@@ -63,19 +65,18 @@ struct ParserState {
         }
     }
 
+    // Called directly from yyerror() and prints the last 2 lines parsed with the last
+    // matched token underlined
     void ReportError(const std::string& reason) const {
         ReportLastTokenError();
         std::cerr << "Reason: " << reason << "\n";
     }
 };
 
-
-
 // Due to the way each file from flex & bison partialy includes one another we make this extern and define it in the .l
 extern ParserState parse;
 
 namespace util {
-
 static char* MakeString(char* from) {
     return strndup(from + 1, strlen(from) - 2);
 }
@@ -87,10 +88,6 @@ static float MakeFloat(char* from) {
 static long long MakeInt(char* from) {
     return atoll(from);
 }
-
 } // util
-
-
-
 
 #endif //__FLEX_UTIL_H_
