@@ -10,11 +10,6 @@ ParserState parse;
 #include <stdlib.h>
 #include <string.h>
 
-#include <iostream>
-
-#define DBG std::cerr << "> [" << yytext << "]\n";
-#define RULE(r) std::cerr << "> R: " << r << " [" << yytext << "]\n";
-
 // Used as workaround for editor highlighter bugs
 #define BRACE_CLOSE '}'
 #define BRACE_OPEN  '{'

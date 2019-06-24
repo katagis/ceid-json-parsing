@@ -1,12 +1,13 @@
 #ifndef __FLEX_UTIL_H_
 #define __FLEX_UTIL_H_
 
+#include "c_comp.h"
+
 #include <string.h>
 #include <stdlib.h>
 #include <vector>
 #include <iostream>
 #include <iomanip>
-#include <algorithm>
 
 // Holds parse state, used for reporting errors.
 struct ParserState {
@@ -14,21 +15,22 @@ struct ParserState {
     int LineNum = 0;
 
     // The contents of the everything we have parsed so far, by line.
-    std::vector<std::string> LineTexts = { "" };
+    std::vector<Str_c> LineTexts = { Str_c::makeEmpty() };
 
     // The last token flex parsed.
-    std::string LastMatch = "";
+    Str_c LastMatch;
 
     // Once we found a \n
     void CountLine() {
         ++LineNum;
-        LineTexts.push_back(std::string());
+        LineTexts.push_back(Str_c::makeEmpty());
     }
 
     // Called always when there is a flex rule match
     void Match(char* text) {
         LineTexts[LineNum].append(text);
-        LastMatch = text;
+        LastMatch.clear();
+        LastMatch.append(text);
     }
 
     // Prints a "pretty" formatted line
@@ -36,32 +38,33 @@ struct ParserState {
         if (Index < 0) {
             return 0;
         }
-        std::cerr << "Line " << std::setw(3) << Index << ": " << LineTexts[Index] << "\n";
-        return LineTexts[Index].length();
+        fprintf(stderr, "Line %3.d: %s\n", Index, LineTexts[Index].ptr);
+        return LineTexts[Index].len;
     }
 
     // Prints a "pretty" fromatted error including the previous line for context.
     void ReportErrorAtOffset(int offset) const {
-        std::string error_token = "";
-        
-        const std::string& last_line = LineTexts[LineNum];
-        const size_t slice_start = last_line.length() > offset ? last_line.length() - offset : 0;
-       
-       if (last_line.length() > 0) {
-           error_token = last_line.substr(slice_start);
-       }
+        if (LineTexts[LineNum].len > 0) {
+            int start_index = LineTexts[LineNum].len - offset;
+            if (start_index < 0) {
+                start_index = 0;
+            }
+            fprintf(stderr, "Failed to parse: '%s'\n", (LineTexts[LineNum].ptr + start_index));
+        }
 
-        std::cerr << "Failed to parse: '" << error_token << "'\n";
         PrintLine(LineNum - 1);
-        const int error_loc = PrintLine(LineNum) - offset;
-        
-        std::cerr << std::string(9, '>') << std::string(std::max(error_loc, 0), '-') 
-                << " " << std::string(LastMatch.length(), '^') << "\n";
+        int error_loc = PrintLine(LineNum) - offset;
+
+        printMultiple('>', 9, stderr);
+        printMultiple('-', error_loc, stderr);
+        fputc(' ', stderr);
+        printMultiple('^', LastMatch.len, stderr);
+        fputc('\n', stderr);
     }
 
     void ReportLastTokenError() const {
-        if (LastMatch.size()) {
-            ReportErrorAtOffset(LastMatch.size());
+        if (LastMatch.len) {
+            ReportErrorAtOffset(LastMatch.len);
         }
     }
 
@@ -69,7 +72,7 @@ struct ParserState {
     // matched token underlined
     void ReportError(const std::string& reason) const {
         ReportLastTokenError();
-        std::cerr << "Reason: " << reason << "\n";
+        fprintf(stderr, "Reason: %s\n", reason.c_str());
     }
 };
 
