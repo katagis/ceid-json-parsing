@@ -3,11 +3,6 @@
 
 #include "c_comp.h"
 #include <vector>
-#include <string>
-#include <iostream>
-#include <unordered_set>
-#include <cstring>
-
 
 struct JObject;
 struct JArray;
@@ -16,7 +11,7 @@ struct JString;
 // Global DB keeping track of ids
 struct JsonDB {
     std::vector<Str_c> IdStrs;
-    std::unordered_set<long long> UserIds;
+    std::vector<long long> UserIds;
 
     // Attempts to Insert an id_str element in the database. Returns false if it already existed
     bool MaybeInsertIdStr(const char* id_str);
@@ -82,8 +77,8 @@ struct HashTagData {
         return Begin + Tag.len + 1; // offset the '#' character
     }
 
-    bool operator==(const HashTagData& other) const {
-       return Begin == other.Begin && (strcmp(Tag.ptr, other.Tag.ptr) == 0);
+    int IsEqual(HashTagData* other) const {
+        return Begin == other->Begin && (strcmp(Tag.ptr, other->Tag.ptr) == 0);
     }
 };
 

@@ -1,9 +1,5 @@
 #include "json_classes.h"
 #include "c_comp.h"
-#include <ostream>
-#include <iomanip>
-#include <codecvt>
-#include <algorithm>
 
 #define OUT stdout
 
@@ -22,8 +18,13 @@ bool JsonDB::MaybeInsertIdStr(const char* data) {
 }
 
 bool JsonDB::MaybeInsertUserId(long long id) {
-    auto result = UserIds.insert(id);
-    return result.second;
+    for (int i = 0; i < UserIds.size(); ++i) {
+        if (UserIds[i] == id) {
+            return false;
+        }
+    }
+    UserIds.push_back(id);
+    return true;
 }
 
 void JValue::Print(int indent) const {
@@ -120,7 +121,7 @@ JString::JString(char* source) {
                 case 'u': {
                     // we are sure that this will always read the correct number of bytes because we check for this in our lexer.
                     // explicit type ensures we have enough width and correct representation for the conversion
-                    uint32_t u_code = strtol(&source[i+2], nullptr, 16);
+                    long u_code = strtol(&source[i+2], nullptr, 16);
                     Text.appendAsUtf8(u_code);
 
                     Length++; // Count this as 1 'actual' character
@@ -351,10 +352,12 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     if (ExMembers.DisplayRange->Begin != 0 ||
         ExMembers.DisplayRange->End != TextSize) {
 
-        std::string All = "Display Range did not match the given full_text.\nText Size:" + std::to_string(TextSize)
-            + " DisplayRange: " + std::to_string(ExMembers.DisplayRange->Begin) 
-            + "," + std::to_string(ExMembers.DisplayRange->End);
-        FailMessage->append(All.c_str());
+        char Message[200];
+        sprintf(Message, 
+            "Display Range did not match the given full_text.\nText Size: %d DisplayRange: [%lli, %lli]",
+            TextSize, ExMembers.DisplayRange->Begin, ExMembers.DisplayRange->End
+        );
+        FailMessage->append(Message);
         return false;
     }
     
@@ -385,7 +388,15 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     // The hash tags could be in random order so do N^2 for now. 
     // TODO: this could be optimized by using unordered_sets instead of vectors
     for (const HashTagData& Outer : TextObj.Hashtags) {
-        if (std::find(Tags.cbegin(), Tags.cend(), Outer) == Tags.cend()) {
+        int found = 0;
+        for(int i = 0; i < Tags.size(); ++i) {
+            if (Outer.IsEqual(&Tags[i])) {
+                found = 1;
+                break;
+            }
+        }
+
+        if (!found) {
             char AddedStr[200];
             sprintf(AddedStr, "Hashtag: '%s' is missing from the entities array or has incorrect Indices.", Outer.Tag.ptr);
             FailMessage->append(AddedStr);

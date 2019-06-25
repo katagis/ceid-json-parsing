@@ -55,7 +55,7 @@ struct Str_c {
         init();
     }
         
-    void appendAsUtf8 (int ucode) {
+    void appendAsUtf8 (long ucode) {
         if (ucode < 0x80) {
             addChar(ucode);
         }

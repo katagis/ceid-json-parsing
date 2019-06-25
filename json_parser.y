@@ -5,7 +5,6 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <iostream>
 void yyerror(const char *);
 extern FILE *yyin;
 extern FILE *yyout;
