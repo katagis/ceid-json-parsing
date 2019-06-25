@@ -97,7 +97,7 @@ struct JString {
 
     JString(char* cstring);
 
-    void Print(std::ostream& os) const;
+    void Print() const;
 
     bool IsRetweet() const;
 };

@@ -5,8 +5,10 @@
 #include <codecvt>
 #include <algorithm>
 
+#define OUT stdout
+
 void Indent(int num) {
-    os << std::string(num * 2, ' ');
+    printMultiple(' ', num * 2, OUT);
 }
 
 bool JsonDB::MaybeInsertIdStr(const char* data) {
@@ -32,63 +34,63 @@ void JValue::Print(int indent) const {
             Data.StringData->Print();
             break;
         case JValueType::Float:
-            os << Data.FloatData;
+            fprintf(OUT, "%f", Data.FloatData);
             break;
         case JValueType::Int:
-            os << Data.IntData;
+            fprintf(OUT, "%lli", Data.IntData);
             break;
         case JValueType::Bool:
             if (Data.BoolData) {
-                os << "true";
+                fprintf(OUT, "true");
             }
             else {
-                os << "false";
+                fprintf(OUT, "false");
             }
             break;
         case JValueType::NullVal:
-            os << "null";
+            fprintf(OUT, "null");
             break;
     }
 }
 
 void JArray::Print(int indent) const {
-    os << "[ "; // Print [ to  os (output stream)
+    fprintf(OUT, "[ ");      // Print [ to OUT
     for (JValue* el : Elements) { // for each element as el
-        os << "\n"; 
+        fprintf(OUT, "\n");
         Indent(indent + 1);    // add (indent + 1) * \t tab characters
         el->Print(indent + 1); // call print for value at indent + 1
-        os << ",";
+        fprintf(OUT, ",");
     }
-    os << "\b \n"; // backspace last comma
-    Indent(os, indent);
-    os << "]"; 
+    fprintf(OUT, "\b \n"); // backspace last comma
+    Indent(indent);
+    fprintf(OUT, "]"); 
 }
 
 void JMember::Print(int indentation) const {
-    os << "\"" << Name << "\": ";
+    fprintf(OUT, "\"%s\": ", Name.c_str());
     Value->Print(indentation);
 }
 
 void JObject::Print(int indent) const {
-    os << "{ "; 
+    fprintf(OUT, "{ "); 
     for (auto it = Memberlist.rbegin(); it != Memberlist.rend(); ++it) {
-        os << "\n"; 
-        Indent(os, indent + 1);
+        fprintf(OUT, "\n"); 
+        Indent(indent + 1);
         (*it)->Print(indent + 1);
-        os << ",";
+        fprintf(OUT, ","); 
     }
-    os << "\b \n";
+    fprintf(OUT, "\b \n");
     Indent(indent);
-    os << "}"; 
+    fprintf(OUT, "}"); 
 }
 
 void JJson::Print() const {
     JsonData->Print(0);
-    os << "\n";
+    fprintf(OUT, "\n");
 };
 
 void JString::Print() const {
-    os << "\"" << Text << "\"";
+    fprintf(OUT, "\"%s\"", Text.c_str());
 };
 
 JString::JString(char* source) {
@@ -273,7 +275,7 @@ void JObject::SwitchOnExMember(JMember* member) {
         case JSpecialMember::DisplayRange:  ExMembers.DisplayRange  = &member->Value->Data.ArrayData->AsRange; break;
         case JSpecialMember::Entities:      ExMembers.Entities      = member->Value->Data.ObjectData; break;
         case JSpecialMember::Hashtags:      ExMembers.Hashtags      = member->Value->Data.ArrayData; break;
-        case JSpecialMember::Indices:      ExMembers.Indices      = &member->Value->Data.ArrayData->AsRange; break;
+        case JSpecialMember::Indices:       ExMembers.Indices      = &member->Value->Data.ArrayData->AsRange; break;
         case JSpecialMember::FullText:      ExMembers.FullText      = member->Value->Data.StringData; break;
     }
 }

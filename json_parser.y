@@ -98,7 +98,7 @@ json:
     value                       { 
                                   //DBG("JSON PARSED") 
                                   $$ = new JJson($1); 
-                                  $$->Print(std::cout);
+                                  $$->Print();
                                   Str_c Error = Str_c::make("The outer object was parsed properly but its not valid. Error was:\n");
                                   if (!$1->Data.ObjectData->FormsValidOuterObject(&Error)) {
                                       parse.ReportError(Error.ptr);
