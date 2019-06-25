@@ -99,9 +99,10 @@ json:
                                   //DBG("JSON PARSED") 
                                   $$ = new JJson($1); 
                                   $$->Print(std::cout);
-                                  std::string Error = "The outer object was parsed properly but its not valid. Error was:\n";
-                                  if (!$1->Data.ObjectData->FormsValidOuterObject(Error)) {
-                                      parse.ReportError(Error);
+                                  Str_c Error = Str_c::make("The outer object was parsed properly but its not valid. Error was:\n");
+                                  if (!$1->Data.ObjectData->FormsValidOuterObject(&Error)) {
+                                      parse.ReportError(Error.ptr);
+                                      Error.clear();
                                       YYERROR;
                                   }
                                   else {
@@ -216,16 +217,20 @@ special_member:
 
                                     // if there is a 'tweet' object we need to verify the username from RT @
                                     if ($3->Members.TweetObj) {
-                                        
                                         // "user"->"ScreenName"->Text
                                         const std::string& OriginalTweetAuthor = $3->Members.User->Members.UScreenName->Text; 
 
                                         // "tweet"->"text" [@User]
                                         const std::string& RetweetAtFound = $3->Members.TweetObj->Members.Text->RetweetUser; 
                                         
-                                        if (OriginalTweetAuthor != RetweetAtFound) { 
-                                            parse.ReportError("Retweet status object ending here is invalid. RT @ user '" + RetweetAtFound 
-                                                            + "' is not the same as the original tweet user. '" + OriginalTweetAuthor + "'");
+                                        if (OriginalTweetAuthor != RetweetAtFound) {
+                                            Str_c Error = Str_c::make("Retweet status object ending here is invalid. RT @ user '");
+                                            Error.append(RetweetAtFound.c_str());
+                                            Error.append("' is not the same as the original tweet user. '");
+                                            Error.append(OriginalTweetAuthor.c_str());
+                                            Error.append("'");
+                                            parse.ReportError(Error.ptr);
+                                            Error.clear();
                                             YYERROR;
                                         }
                                     }
@@ -243,9 +248,10 @@ special_member:
                                     }
                                 }
     | F_ET_DECLARATION ':' object   { 
-                                        std::string Error = "Extended tweet object ending here is invalid: ";
-                                        if (!$3->FormsValidExtendedTweetObj(Error)) {
-                                            parse.ReportError(Error);
+                                        Str_c Error = Str_c::make("Extended tweet object ending here is invalid: ");
+                                        if (!$3->FormsValidExtendedTweetObj(&Error)) {
+                                            parse.ReportError(Error.ptr);
+                                            Error.clear();
                                             YYERROR;
                                         }
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::ExTweet); 
@@ -260,10 +266,11 @@ special_member:
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::Entities); 
                                     }
     | F_ET_HASHTAGS ':' array       { 
-                                        std::string Error = "Array ending here is not a valid hastags array: ";
-                                        bool IsValidArray = $3->ExtractHashtags(Error);
+                                        Str_c Error = Str_c::make("Array ending here is not a valid hastags array: ");
+                                        bool IsValidArray = $3->ExtractHashtags(&Error);
                                         if (!IsValidArray) {
-                                            parse.ReportError(Error);
+                                            parse.ReportError(Error.ptr);
+                                            Error.clear();
                                             YYERROR;
                                         }
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::Hashtags); 
@@ -275,8 +282,9 @@ special_member:
                                             $$ = new JMember($1, new JValue(str), JSpecialMember::FullText); 
                                         }
                                         else {
-                                            parse.ReportError("'full_text' is too long: " + std::to_string(str->Length) +
-                                                              "/" + std::to_string(ALLOWED_FULLTEXT_LEN));
+                                            char Error[200];
+                                            sprintf(Error, "'full_text' is too long: %d/%d", str->Length, ALLOWED_FULLTEXT_LEN);
+                                            parse.ReportError(Error);
                                             YYERROR;
                                         }
                                     }

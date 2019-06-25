@@ -70,9 +70,9 @@ struct ParserState {
 
     // Called directly from yyerror() and prints the last 2 lines parsed with the last
     // matched token underlined
-    void ReportError(const std::string& reason) const {
+    void ReportError(const char* reason) const {
         ReportLastTokenError();
-        fprintf(stderr, "Reason: %s\n", reason.c_str());
+        fprintf(stderr, "Reason: %s\n", reason);
     }
 };
 

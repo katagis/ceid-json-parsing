@@ -11,7 +11,7 @@ struct Str_c {
     char* ptr;
     int len;
 
-    static Str_c make(char* text) {
+    static Str_c make(const char* text) {
         Str_c result;
         result.len = strlen(text);
         result.ptr = strdup(text);

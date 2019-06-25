@@ -1,10 +1,11 @@
 #include "json_classes.h"
+#include "c_comp.h"
 #include <ostream>
 #include <iomanip>
 #include <codecvt>
 #include <algorithm>
 
-void Indent(std::ostream& os, int num) {
+void Indent(int num) {
     os << std::string(num * 2, ' ');
 }
 
@@ -19,16 +20,16 @@ bool JsonDB::MaybeInsertUserId(long long id) {
     return result.second;
 }
 
-std::ostream& JValue::Print(std::ostream& os, int indent) const {
+void JValue::Print(int indent) const {
     switch(Type) {
         case JValueType::Object:
-            Data.ObjectData->Print(os, indent);
+            Data.ObjectData->Print(indent);
             break;
         case JValueType::Array:
-            Data.ArrayData->Print(os, indent);
+            Data.ArrayData->Print(indent);
             break;
         case JValueType::String:
-            Data.StringData->Print(os);
+            Data.StringData->Print();
             break;
         case JValueType::Float:
             os << Data.FloatData;
@@ -48,52 +49,46 @@ std::ostream& JValue::Print(std::ostream& os, int indent) const {
             os << "null";
             break;
     }
-    return os;
 }
 
-std::ostream& JArray::Print(std::ostream& os, int indent) const {
+void JArray::Print(int indent) const {
     os << "[ "; // Print [ to  os (output stream)
     for (JValue* el : Elements) { // for each element as el
         os << "\n"; 
-        Indent(os, indent + 1);    // add (indent + 1) * \t tab characters
-        el->Print(os, indent + 1); // call print for value at indent + 1
+        Indent(indent + 1);    // add (indent + 1) * \t tab characters
+        el->Print(indent + 1); // call print for value at indent + 1
         os << ",";
     }
     os << "\b \n"; // backspace last comma
     Indent(os, indent);
     os << "]"; 
-    return os;
 }
 
-std::ostream& JMember::Print(std::ostream& os, int indentation) const {
+void JMember::Print(int indentation) const {
     os << "\"" << Name << "\": ";
-    Value->Print(os, indentation);
-    return os;
+    Value->Print(indentation);
 }
 
-std::ostream& JObject::Print(std::ostream& os, int indent) const {
+void JObject::Print(int indent) const {
     os << "{ "; 
     for (auto it = Memberlist.rbegin(); it != Memberlist.rend(); ++it) {
         os << "\n"; 
         Indent(os, indent + 1);
-        (*it)->Print(os, indent + 1);
+        (*it)->Print(indent + 1);
         os << ",";
     }
     os << "\b \n";
-    Indent(os, indent);
+    Indent(indent);
     os << "}"; 
-    return os;
 }
 
-std::ostream& JJson::Print(std::ostream& os) const {
-    JsonData->Print(os, 0);
+void JJson::Print() const {
+    JsonData->Print(0);
     os << "\n";
-    return os;
 };
 
-std::ostream& JString::Print(std::ostream& os) const {
+void JString::Print() const {
     os << "\"" << Text << "\"";
-    return os;
 };
 
 JString::JString(char* source) {
@@ -296,11 +291,11 @@ bool JObject::FormsValidRetweetObj() const {
     return true;
 }
 
-bool JObject::FormsValidOuterObject(std::string& FailMessage) const {
+bool JObject::FormsValidOuterObject(Str_c* FailMessage) const {
     
     // Our outer object MUST include IdStr, Text, User, Date.
     if (!Members.IdStr || !Members.Text || !Members.User || !Members.CreatedAt) {
-        FailMessage += "Missing field IdStr/Text/User/CreatedAt";
+        FailMessage->append("Missing field IdStr/Text/User/CreatedAt");
         return false;
     }
 
@@ -314,7 +309,7 @@ bool JObject::FormsValidOuterObject(std::string& FailMessage) const {
     // * an exteneded tweet object 
 
     if (!ExMembers.DisplayRange) {
-        FailMessage += "Missing display range when truncated == true.";
+        FailMessage->append("Missing display range when truncated == true.");
         return false;
     }
 
@@ -323,13 +318,13 @@ bool JObject::FormsValidOuterObject(std::string& FailMessage) const {
     if (ExMembers.DisplayRange->Begin != 0 ||
         ExMembers.DisplayRange->End != TextSize) {
 
-        FailMessage += "Display Range did not match the given text.";
+        FailMessage->append("Display Range did not match the given text.");
         return false;
     }
 
     // Finally check for the extended tweet object. 
     if (!ExMembers.ExTweet) {
-        FailMessage += "Missing extended tweet when truncated == true.";
+        FailMessage->append("Missing extended tweet when truncated == true.");
         return false;
     }
 
@@ -340,11 +335,11 @@ bool JObject::FormsValidOuterObject(std::string& FailMessage) const {
     return true;
 }
 
-bool JObject::FormsValidExtendedTweetObj(std::string& FailMessage) const {
+bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
 
     // Require full_text and display range.
     if (!ExMembers.FullText || !ExMembers.DisplayRange) {
-        FailMessage += "Missing 'full_text' and/or 'display_text_range'.";
+        FailMessage->append("Missing 'full_text' and/or 'display_text_range'.");
         return false;
     }
 
@@ -353,10 +348,10 @@ bool JObject::FormsValidExtendedTweetObj(std::string& FailMessage) const {
     if (ExMembers.DisplayRange->Begin != 0 ||
         ExMembers.DisplayRange->End != TextSize) {
 
-        FailMessage += "Display Range did not match the given full_text.\nText Size:" + std::to_string(TextSize)
+        std::string All = "Display Range did not match the given full_text.\nText Size:" + std::to_string(TextSize)
             + " DisplayRange: " + std::to_string(ExMembers.DisplayRange->Begin) 
             + "," + std::to_string(ExMembers.DisplayRange->End);
-
+        FailMessage->append(All.c_str());
         return false;
     }
     
@@ -371,7 +366,7 @@ bool JObject::FormsValidExtendedTweetObj(std::string& FailMessage) const {
     }
 
     if (HashtagsInArray != TextObj.Hashtags.size()) {
-        FailMessage += "Hashtags found in text did not match all the hashtags in the entites.";
+        FailMessage->append("Hashtags found in text did not match all the hashtags in the entites.");
         return false;
     }
 
@@ -388,8 +383,9 @@ bool JObject::FormsValidExtendedTweetObj(std::string& FailMessage) const {
     // TODO: this could be optimized by using unordered_sets instead of vectors
     for (const HashTagData& Outer : TextObj.Hashtags) {
         if (std::find(Tags.cbegin(), Tags.cend(), Outer) == Tags.cend()) {
-            FailMessage += "Hashtag: '" + Outer.Tag + "' is missing from the entities array or has"
+            auto all = "Hashtag: '" + Outer.Tag + "' is missing from the entities array or has"
                 + " incorrect Indices.";
+            FailMessage->append(all.c_str());
             return false;
         }
     }
@@ -397,7 +393,7 @@ bool JObject::FormsValidExtendedTweetObj(std::string& FailMessage) const {
     return true;
 }
 
-bool JArray::ExtractHashtags(std::string& Error) {
+bool JArray::ExtractHashtags(Str_c* Error) {
     // This array must ONLY include objects that contain 'text', 'indices'
     // the array can be empty.
     // Actual checking for hashtag locations cannot be performed at this stage
@@ -405,14 +401,14 @@ bool JArray::ExtractHashtags(std::string& Error) {
     for (JValue* Element : Elements) {
         // Must be an object type
         if (Element->Type != JValueType::Object) {
-            Error += "An element of the array is not an object.";
+            Error->append("An element of the array is not an object.");
             return false;
         }
 
         // Now check this object to find if it includes "text" & "indices" they are required.
         JObject* Subobject = Element->Data.ObjectData;
         if (!Subobject->Members.Text || !Subobject->ExMembers.Indices) {
-            Error += "An element of the array is missing 'text' and/or 'indices'.";
+            Error->append("An element of the array is missing 'text' and/or 'indices'.");
             return false;
         }
 
@@ -420,7 +416,7 @@ bool JArray::ExtractHashtags(std::string& Error) {
         // Therefore we need to offset the length by 1
         long long IndiceLength = Subobject->ExMembers.Indices->End - Subobject->ExMembers.Indices->Begin;
         if (IndiceLength != Subobject->Members.Text->Length + 1) {
-            Error += "Indice range did not match the text length.";
+            Error->append("Indice range did not match the text length.");
             return false;
 
         }

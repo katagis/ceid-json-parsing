@@ -1,6 +1,7 @@
 #ifndef __JSON_CLASSES_
 #define __JSON_CLASSES_
 
+#include "c_comp.h"
 #include <vector>
 #include <string>
 #include <iostream>
@@ -96,18 +97,16 @@ struct JString {
 
     JString(char* cstring);
 
-    std::ostream& Print(std::ostream& os) const;
+    void Print(std::ostream& os) const;
 
     bool IsRetweet() const;
 };
-
-
 
 struct JValue {
     JValueType Type;
     JValueData Data;
 
-    std::ostream& Print(std::ostream& os, int indentation) const;
+    void Print(int indentation) const;
 
     JValue() {
         Type = JValueType::NullVal;
@@ -191,11 +190,11 @@ struct JArray {
         return AsRange.Begin >= 0;
     }
 
-    std::ostream& Print(std::ostream& os, int indentation) const;
+    void Print(int indentation) const;
 
     // Attempts to exract and populate the Hashtags vector from the elements.
     // Returns true if this array forms a valid "hashtags" array. 
-    bool ExtractHashtags(std::string& Error);
+    bool ExtractHashtags(Str_c* Error);
 };
 
 struct JMember {
@@ -203,7 +202,7 @@ struct JMember {
     JValue* Value;
     JSpecialMember SpecialType;
 
-    std::ostream& Print(std::ostream& os, int indentation) const;
+    void Print(int indentation) const;
 
     JMember(const char* name, JValue* value, JSpecialMember type = JSpecialMember::None)
         : Name(std::string(name))
@@ -254,7 +253,7 @@ struct JObject {
     JSpecialMembers Members;
     JExSpecialMembers ExMembers;
 
-    std::ostream& Print(std::ostream& os, int indentation) const;
+    void Print(int indentation) const;
 
     
     bool FormsValidRetweetObj() const;
@@ -264,11 +263,11 @@ struct JObject {
 
     // Checks if this JObject forms a valid "outer" object 
     // ie MUST have text, valid user, IdStr, date AND extra if truncated = true
-    bool FormsValidOuterObject(std::string& FailMessage) const;
+    bool FormsValidOuterObject(Str_c* FailMessage) const;
     
     // Checks if this JObject forms a valid "extended tweet" object
     // extended tweet MUST include valid hashtags as entities if there are any.
-    bool FormsValidExtendedTweetObj(std::string& FailMessage) const;
+    bool FormsValidExtendedTweetObj(Str_c* FailMessage) const;
 
 private:
     // Use another function for all the ExMembers just for code readability
@@ -281,7 +280,7 @@ struct JJson {
     JJson(JValue* data)
         : JsonData(data) {}
 
-    std::ostream& Print(std::ostream& os) const;
+    void Print() const;
 };
 
 #endif //__JSON_CLASSES_
