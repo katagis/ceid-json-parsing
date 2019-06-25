@@ -72,7 +72,8 @@ struct Str_c {
 };
 
 static void printMultiple(char c, int times, FILE* fp) {
-    for (int i = 0; i < times; ++i) {
+    int i = 0;
+    for (i = 0; i < times; ++i) {
         fputc(c, fp);
     }
 }

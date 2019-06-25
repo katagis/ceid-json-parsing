@@ -60,10 +60,11 @@ void JValue::Print(int indent) const {
 
 void JArray::Print(int indent) const {
     fprintf(OUT, "[ ");      // Print [ to OUT
-    for (JValue* el : Elements) { // for each element as el
+    int i = 0;
+    for (i = 0; i < Elements.size(); ++i) { // for each element as el
         fprintf(OUT, "\n");
         Indent(indent + 1);    // add (indent + 1) * \t tab characters
-        el->Print(indent + 1); // call print for value at indent + 1
+        Elements[i]->Print(indent + 1); // call print for value at indent + 1
         fprintf(OUT, ",");
     }
     fprintf(OUT, "\b \n"); // backspace last comma
@@ -78,10 +79,11 @@ void JMember::Print(int indentation) const {
 
 void JObject::Print(int indent) const {
     fprintf(OUT, "{ "); 
-    for (auto it = Memberlist.rbegin(); it != Memberlist.rend(); ++it) {
+    int i = 0;
+    for (i = Memberlist.size() - 1; i >= 0; --i) { // reverse of push_back'ed order.
         fprintf(OUT, "\n"); 
         Indent(indent + 1);
-        (*it)->Print(indent + 1);
+        Memberlist[i]->Print(indent + 1);
         fprintf(OUT, ","); 
     }
     fprintf(OUT, "\b \n");
@@ -387,10 +389,13 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     // All that is left is to verify hashtag positions on the actual text.
     // The hash tags could be in random order so do N^2 for now. 
     // TODO: this could be optimized by using unordered_sets instead of vectors
-    for (const HashTagData& Outer : TextObj.Hashtags) {
+    int i = 0;
+    int j = 0;
+    for (i = 0; i < TextObj.Hashtags.size(); ++i) {
+        const HashTagData* Outer = &TextObj.Hashtags[i];
         int found = 0;
-        for(int i = 0; i < Tags.size(); ++i) {
-            if (Outer.IsEqual(&Tags[i])) {
+        for (j = 0; j < Tags.size(); ++j) {
+            if (Outer->IsEqual(&Tags[j])) {
                 found = 1;
                 break;
             }
@@ -398,7 +403,7 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
 
         if (!found) {
             char AddedStr[200];
-            sprintf(AddedStr, "Hashtag: '%s' is missing from the entities array or has incorrect Indices.", Outer.Tag.ptr);
+            sprintf(AddedStr, "Hashtag: '%s' is missing from the entities array or has incorrect Indices.", Outer->Tag.ptr);
             FailMessage->append(AddedStr);
             return false;
         }
@@ -412,7 +417,9 @@ bool JArray::ExtractHashtags(Str_c* Error) {
     // the array can be empty.
     // Actual checking for hashtag locations cannot be performed at this stage
     
-    for (JValue* Element : Elements) {
+    int i = 0;
+    for (i = 0; i < Elements.size(); ++i) {
+        JValue* Element = Elements[i];
         // Must be an object type
         if (Element->Type != JValueType::Object) {
             Error->append("An element of the array is not an object.");
