@@ -196,11 +196,11 @@ JString::JString(char* source) {
                   (*readptr >= '0' && *readptr <= '9') || // Allow 0-9
                   *readptr == '_')  // Allow underscore
             {                                           // Everything else stops the hashtag
-                hashtag.Tag.push_back(*readptr);
+                hashtag.Tag.addChar(*readptr);
                 readptr++;
             }
             
-            if (hashtag.Tag.length() > 0) {
+            if (hashtag.Tag.len > 0) {
                 // We have a valid hashtag.
                 // Assumes indices count escaped sequences as 1 character. (eg: "text"="/u2330 #abc" starts at 2)
                 hashtag.Begin = Length; // conatins the '#' param
@@ -208,11 +208,11 @@ JString::JString(char* source) {
             } // the rest of the code works both for empty or non-empty TempHashtag
 
             Text.push_back('#');
-            Text.append(hashtag.Tag);
+            Text.append(hashtag.Tag.ptr);
 
-            Length += hashtag.Tag.length() + 1; // Count unicode formatted characters added to text.
+            Length += hashtag.Tag.len + 1; // Count unicode formatted characters added to text.
 
-            i += hashtag.Tag.length(); // Forward by the length of the hashtag
+            i += hashtag.Tag.len; // Forward by the length of the hashtag
         }
         else {
             Text.push_back(c);
@@ -385,9 +385,9 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     // TODO: this could be optimized by using unordered_sets instead of vectors
     for (const HashTagData& Outer : TextObj.Hashtags) {
         if (std::find(Tags.cbegin(), Tags.cend(), Outer) == Tags.cend()) {
-            auto all = "Hashtag: '" + Outer.Tag + "' is missing from the entities array or has"
-                + " incorrect Indices.";
-            FailMessage->append(all.c_str());
+            char AddedStr[200];
+            sprintf(AddedStr, "Hashtag: '%s' is missing from the entities array or has incorrect Indices.", Outer.Tag.ptr);
+            FailMessage->append(AddedStr);
             return false;
         }
     }
@@ -425,7 +425,7 @@ bool JArray::ExtractHashtags(Str_c* Error) {
 
         // Everything is correct. Collect this result and add it to the hashtags vector.
         HashTagData Data;
-        Data.Tag = Subobject->Members.Text->Text;
+        Data.Tag = Str_c::make(Subobject->Members.Text->Text.c_str());
         Data.Begin = Subobject->ExMembers.Indices->Begin;
 
         Hashtags.push_back(Data);

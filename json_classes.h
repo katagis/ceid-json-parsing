@@ -71,15 +71,19 @@ enum class JSpecialMember {
 
 // POD utility for storing a starting point of a hashtag and its text.
 struct HashTagData {
-    std::string Tag;
+    Str_c Tag;
     unsigned int Begin;
 
+    HashTagData() {
+        Tag = Str_c::makeEmpty();
+    }
+
     unsigned int GetEnd() const {
-        return Begin + Tag.length() + 1; // offset the '#' character
+        return Begin + Tag.len + 1; // offset the '#' character
     }
 
     bool operator==(const HashTagData& other) const {
-       return Begin == other.Begin && Tag == other.Tag;
+       return Begin == other.Begin && (strcmp(Tag.ptr, other.Tag.ptr) == 0);
     }
 };
 
