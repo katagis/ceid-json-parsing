@@ -54,6 +54,21 @@ struct Str_c {
         }
         init();
     }
+        
+    void appendAsUtf8 (int ucode) {
+        if (ucode < 0x80) {
+            addChar(ucode);
+        }
+        else if (ucode < 0x800) {
+            addChar((ucode >> 6)   | 0xC0);
+            addChar((ucode & 0x3F) | 0x80);
+        }
+        else {
+            addChar(((ucode >> 12)       ) | 0xE0);
+            addChar(((ucode >> 6 ) & 0x3F) | 0x80);
+            addChar(((ucode      ) & 0x3F) | 0x80);
+        }
+    }
 };
 
 static void printMultiple(char c, int times, FILE* fp) {
@@ -61,5 +76,6 @@ static void printMultiple(char c, int times, FILE* fp) {
         fputc(c, fp);
     }
 }
+
 
 #endif

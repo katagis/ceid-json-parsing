@@ -15,7 +15,7 @@ struct JString;
 
 // Global DB keeping track of ids
 struct JsonDB {
-    std::unordered_set<std::string> IdStrs;
+    std::vector<Str_c> IdStrs;
     std::unordered_set<long long> UserIds;
 
     // Attempts to Insert an id_str element in the database. Returns false if it already existed
@@ -94,10 +94,10 @@ struct JString {
     unsigned int Length;
 
     // Converted text.
-    std::string Text;
+    Str_c Text;
     // This will contain the hashtags found (if any)
     std::vector<HashTagData> Hashtags;
-    std::string RetweetUser;
+    Str_c RetweetUser;
 
     JString(char* cstring);
 
@@ -202,14 +202,14 @@ struct JArray {
 };
 
 struct JMember {
-    std::string Name;
+    Str_c Name;
     JValue* Value;
     JSpecialMember SpecialType;
 
     void Print(int indentation) const;
 
     JMember(const char* name, JValue* value, JSpecialMember type = JSpecialMember::None)
-        : Name(std::string(name))
+        : Name(Str_c::make(name))
         , Value(value)
         , SpecialType(type) {}
 };

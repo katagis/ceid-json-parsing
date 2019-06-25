@@ -12,9 +12,13 @@ void Indent(int num) {
 }
 
 bool JsonDB::MaybeInsertIdStr(const char* data) {
-    auto result = IdStrs.insert(std::string(data));
-    // return if insert actually happened
-    return result.second;
+    for (int i = 0; i < IdStrs.size(); ++i) {
+        if (strcmp(data, IdStrs[i].ptr) == 0) {
+            return false;
+        }
+    }
+    IdStrs.push_back(Str_c::make(data));
+    return true;
 }
 
 bool JsonDB::MaybeInsertUserId(long long id) {
@@ -67,7 +71,7 @@ void JArray::Print(int indent) const {
 }
 
 void JMember::Print(int indentation) const {
-    fprintf(OUT, "\"%s\": ", Name.c_str());
+    fprintf(OUT, "\"%s\": ", Name.ptr);
     Value->Print(indentation);
 }
 
@@ -90,13 +94,13 @@ void JJson::Print() const {
 };
 
 void JString::Print() const {
-    fprintf(OUT, "\"%s\"", Text.c_str());
+    fprintf(OUT, "\"%s\"", Text.ptr);
 };
 
 JString::JString(char* source) {
+    RetweetUser = Str_c::makeEmpty();
+    Text = Str_c::makeEmpty(); // normally we should do reserve here
     const int sourcelen = strlen(source);
-    
-    Text.reserve(sourcelen);
 
     Length = 0;
     for (int i = 0; i < sourcelen; ++i) {
@@ -108,7 +112,7 @@ JString::JString(char* source) {
 
             switch (esc) {
                 case 'n': {
-                    Text.push_back('\n');
+                    Text.addChar('\n');
                     Length++;
                     i++;
                     break;
@@ -117,18 +121,15 @@ JString::JString(char* source) {
                     // we are sure that this will always read the correct number of bytes because we check for this in our lexer.
                     // explicit type ensures we have enough width and correct representation for the conversion
                     uint32_t u_code = strtol(&source[i+2], nullptr, 16);
-    
-                    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
-                    std::string utf8str = conv.to_bytes(u_code); // convert our U+(u_code) bytes to the actual 3 bytes of UTF-8 escaped string
+                    Text.appendAsUtf8(u_code);
 
-                    Text.append(utf8str);
                     Length++; // Count this as 1 'actual' character
-                    i += 5; // increase by characters read after \ (eg: u2345)
+                    i += 5;   // increase by characters read after \ (eg: u2345)
                     break;
                 }
                 default: {
                     // All other cases just push the character that was escaped.
-                    Text.push_back(esc);
+                    Text.addChar(esc);
                     Length++;
                     i++;
                     break;
@@ -144,35 +145,35 @@ JString::JString(char* source) {
                 // source[i+2] is not out of bounds here. (it can be '\0')
                 switch(source[i+2]) {
                     case 'B': {
-                        Text.push_back('+');
+                        Text.addChar('+');
                         Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case '1': {
-                        Text.push_back('!');
+                        Text.addChar('!');
                         Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case '0': {
-                        Text.push_back(' ');
+                        Text.addChar(' ');
                         Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case 'C': {
-                        Text.push_back(',');
+                        Text.addChar(',');
                         Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case '6': {
-                        Text.push_back('&');
+                        Text.addChar('&');
                         Length++;
                         i += 2;
                         FoundMatch = true;
@@ -183,7 +184,7 @@ JString::JString(char* source) {
 
             // if no match found just add '%'
             if (!FoundMatch) {
-                Text.push_back(c);
+                Text.addChar(c);
                 Length++;
             }
         }
@@ -207,7 +208,7 @@ JString::JString(char* source) {
                 Hashtags.push_back(hashtag);
             } // the rest of the code works both for empty or non-empty TempHashtag
 
-            Text.push_back('#');
+            Text.addChar('#');
             Text.append(hashtag.Tag.ptr);
 
             Length += hashtag.Tag.len + 1; // Count unicode formatted characters added to text.
@@ -215,7 +216,7 @@ JString::JString(char* source) {
             i += hashtag.Tag.len; // Forward by the length of the hashtag
         }
         else {
-            Text.push_back(c);
+            Text.addChar(c);
             Length++;
         }
     }
@@ -232,14 +233,14 @@ JString::JString(char* source) {
                 (*readptr > '0' && *readptr < '9') || // Allow 0-9
                  *readptr == '_')  // Allow underscore
         {
-            RetweetUser.push_back(*readptr);
+            RetweetUser.addChar(*readptr);
             readptr++;
         }
     }
 }
 
 bool JString::IsRetweet() const {
-    return RetweetUser.length() > 0;
+    return RetweetUser.len > 0;
 }
 
 void JObject::AddMember(JMember* member) {
@@ -287,7 +288,7 @@ bool JObject::FormsValidRetweetObj() const {
     }
     // Now that we have them we also need to check if the text contains RT @.
     // At this level we cannot check if the @Username is the correct username yet.
-    if (Members.Text->RetweetUser.empty()) {
+    if (!Members.Text->RetweetUser.len) {
         return false;
     }
     return true;
@@ -425,7 +426,7 @@ bool JArray::ExtractHashtags(Str_c* Error) {
 
         // Everything is correct. Collect this result and add it to the hashtags vector.
         HashTagData Data;
-        Data.Tag = Str_c::make(Subobject->Members.Text->Text.c_str());
+        Data.Tag = Str_c::make(Subobject->Members.Text->Text.ptr);
         Data.Begin = Subobject->ExMembers.Indices->Begin;
 
         Hashtags.push_back(Data);

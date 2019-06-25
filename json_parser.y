@@ -179,7 +179,7 @@ special_member:
                                     }
                                     else {
                                         parse.ReportError("This text field is too long.");
-                                        std::cout << "Length: " << str->Text.length() << "/142\n";
+                                        std::cout << "Length: " << str->Text.len << "/142\n";
                                         YYERROR;
                                     }
                                 }
@@ -218,16 +218,15 @@ special_member:
                                     // if there is a 'tweet' object we need to verify the username from RT @
                                     if ($3->Members.TweetObj) {
                                         // "user"->"ScreenName"->Text
-                                        const std::string& OriginalTweetAuthor = $3->Members.User->Members.UScreenName->Text; 
+                                        const char* OriginalTweetAuthor = $3->Members.User->Members.UScreenName->Text.ptr; 
 
                                         // "tweet"->"text" [@User]
-                                        const std::string& RetweetAtFound = $3->Members.TweetObj->Members.Text->RetweetUser; 
-                                        
-                                        if (OriginalTweetAuthor != RetweetAtFound) {
+                                        const char* RetweetAtFound = $3->Members.TweetObj->Members.Text->RetweetUser.ptr; 
+                                        if (strcmp(OriginalTweetAuthor, RetweetAtFound) != 0) {
                                             Str_c Error = Str_c::make("Retweet status object ending here is invalid. RT @ user '");
-                                            Error.append(RetweetAtFound.c_str());
+                                            Error.append(RetweetAtFound);
                                             Error.append("' is not the same as the original tweet user. '");
-                                            Error.append(OriginalTweetAuthor.c_str());
+                                            Error.append(OriginalTweetAuthor);
                                             Error.append("'");
                                             parse.ReportError(Error.ptr);
                                             Error.clear();
@@ -243,7 +242,7 @@ special_member:
                                     }
                                     else {
                                         parse.ReportError("Tweet object ending here is invalid. "
-                                                          "Tweet objects require 'text' field starting with 'RT @Username', and a valid 'user'.");
+                                            "Tweet objects require 'text' field starting with 'RT @Username', and a valid 'user'.");
                                         YYERROR;
                                     }
                                 }
