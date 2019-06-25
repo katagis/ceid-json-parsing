@@ -1,4 +1,3 @@
-
 %{
 #include "flex_util.h"
 #include "json_classes.h"
@@ -100,12 +99,12 @@ json:
                                   $$->Print();
                                   Str_c Error = Str_c::make("The outer object was parsed properly but its not valid. Error was:\n");
                                   if (!$1->Data.ObjectData->FormsValidOuterObject(&Error)) {
-                                      parse.ReportError(Error.ptr);
+                                      PS_ReportError(Error.ptr);
                                       Error.clear();
                                       YYERROR;
                                   }
                                   else {
-                                      std::cout << "Input was a complete and valid outer object.\n";
+                                      fprintf(OUT, "Input was a complete and valid outer object.\n");
                                   }
                                 }
     ;
@@ -154,7 +153,7 @@ values:
 special_intrange: 
     '[' POS_INT ',' POS_INT ']' { 
                                     if ($2 > $4) {
-                                        parse.ReportError("In the range ending here: Begin > End.");
+                                        PS_ReportError("In the range ending here: Begin > End.");
                                         YYERROR;
                                     }
                                     $$ = new JArray($2, $4); 
@@ -167,7 +166,7 @@ special_member:
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::IdStr); 
                                     }
                                     else {
-                                        parse.ReportError("ID String already exists.");
+                                        PS_ReportError("ID String already exists.");
                                         YYERROR;
                                     }
                                 }
@@ -177,8 +176,8 @@ special_member:
                                         $$ = new JMember($1, new JValue(str), JSpecialMember::Text); 
                                     }
                                     else {
-                                        parse.ReportError("This text field is too long.");
-                                        std::cout << "Length: " << str->Text.len << "/142\n";
+                                        PS_ReportError("This text field is too long.");
+                                        fprintf(OUT, "Length: %d/%d\n", str->Text.len, ALLOWED_TEXT_LEN);
                                         YYERROR;
                                     }
                                 }
@@ -191,7 +190,7 @@ special_member:
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::UId); 
                                     }
                                     else {
-                                        parse.ReportError("User ID already exists.");
+                                        PS_ReportError("User ID already exists.");
                                         YYERROR;
                                     }
                                 }
@@ -200,7 +199,7 @@ special_member:
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::User);
                                     }
                                     else {
-                                        parse.ReportError("User ending here is missing fields. "
+                                        PS_ReportError("User ending here is missing fields. "
                                                           "All user objects must atleast include screen_name.");
                                         YYERROR;
                                     }
@@ -209,7 +208,7 @@ special_member:
                                     // A "retweet_status" does not always need a "tweet" object.
                                     // but MUST have text and valid User Object
                                     if (!$3->Members.Text || !$3->Members.User) {
-                                        parse.ReportError("Retweet status object ending here is invalid. "
+                                        PS_ReportError("Retweet status object ending here is invalid. "
                                                           "It is missing 'text' and/or 'user' field." );
                                         YYERROR;
                                     }
@@ -227,7 +226,7 @@ special_member:
                                             Error.append("' is not the same as the original tweet user. '");
                                             Error.append(OriginalTweetAuthor);
                                             Error.append("'");
-                                            parse.ReportError(Error.ptr);
+                                            PS_ReportError(Error.ptr);
                                             Error.clear();
                                             YYERROR;
                                         }
@@ -240,7 +239,7 @@ special_member:
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::TweetObj);
                                     }
                                     else {
-                                        parse.ReportError("Tweet object ending here is invalid. "
+                                        PS_ReportError("Tweet object ending here is invalid. "
                                             "Tweet objects require 'text' field starting with 'RT @Username', and a valid 'user'.");
                                         YYERROR;
                                     }
@@ -248,7 +247,7 @@ special_member:
     | F_ET_DECLARATION ':' object   { 
                                         Str_c Error = Str_c::make("Extended tweet object ending here is invalid: ");
                                         if (!$3->FormsValidExtendedTweetObj(&Error)) {
-                                            parse.ReportError(Error.ptr);
+                                            PS_ReportError(Error.ptr);
                                             Error.clear();
                                             YYERROR;
                                         }
@@ -258,7 +257,7 @@ special_member:
     | F_ET_DISPLAYRANGE ':' special_intrange { $$ = new JMember($1, new JValue($3), JSpecialMember::DisplayRange); }
     | F_ET_ENTITIES ':' object      { 
                                         if (!$3->ExMembers.Hashtags) {
-                                            parse.ReportError("Entities object ending here is missing a 'hashtags' member.");
+                                            PS_ReportError("Entities object ending here is missing a 'hashtags' member.");
                                             YYERROR;
                                         }
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::Entities); 
@@ -267,7 +266,7 @@ special_member:
                                         Str_c Error = Str_c::make("Array ending here is not a valid hastags array: ");
                                         bool IsValidArray = $3->ExtractHashtags(&Error);
                                         if (!IsValidArray) {
-                                            parse.ReportError(Error.ptr);
+                                            PS_ReportError(Error.ptr);
                                             Error.clear();
                                             YYERROR;
                                         }
@@ -282,7 +281,7 @@ special_member:
                                         else {
                                             char Error[200];
                                             sprintf(Error, "'full_text' is too long: %d/%d", str->Length, ALLOWED_FULLTEXT_LEN);
-                                            parse.ReportError(Error);
+                                            PS_ReportError(Error);
                                             YYERROR;
                                         }
                                     }
@@ -311,12 +310,17 @@ special_asvalues:
 %%
 
 void yyerror(const char *s) {
-    parse.ReportError(s);
+    PS_ReportError(s);
 }
 
 void parse_args(int argc, char **argv);
 
+void init() {
+    PS_Init();
+}
+
 int main (int argc, char **argv) {
+    init(); 
     parse_args(argc, argv);
     yyparse();
     return 0;

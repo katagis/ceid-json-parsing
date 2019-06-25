@@ -1,15 +1,13 @@
 #include "json_classes.h"
 #include "c_comp.h"
 
-#define OUT stdout
-
 void Indent(int num) {
     printMultiple(' ', num * 2, OUT);
 }
 
 bool JsonDB::MaybeInsertIdStr(const char* data) {
     for (int i = 0; i < IdStrs.size(); ++i) {
-        if (strcmp(data, IdStrs[i].ptr) == 0) {
+        if (strcmp(data, IdStrs.data[i].ptr) == 0) {
             return false;
         }
     }
@@ -19,7 +17,7 @@ bool JsonDB::MaybeInsertIdStr(const char* data) {
 
 bool JsonDB::MaybeInsertUserId(long long id) {
     for (int i = 0; i < UserIds.size(); ++i) {
-        if (UserIds[i] == id) {
+        if (UserIds.data[i] == id) {
             return false;
         }
     }
@@ -64,7 +62,7 @@ void JArray::Print(int indent) const {
     for (i = 0; i < Elements.size(); ++i) { // for each element as el
         fprintf(OUT, "\n");
         Indent(indent + 1);    // add (indent + 1) * \t tab characters
-        Elements[i]->Print(indent + 1); // call print for value at indent + 1
+        Elements.data[i]->Print(indent + 1); // call print for value at indent + 1
         fprintf(OUT, ",");
     }
     fprintf(OUT, "\b \n"); // backspace last comma
@@ -83,7 +81,7 @@ void JObject::Print(int indent) const {
     for (i = Memberlist.size() - 1; i >= 0; --i) { // reverse of push_back'ed order.
         fprintf(OUT, "\n"); 
         Indent(indent + 1);
-        Memberlist[i]->Print(indent + 1);
+        Memberlist.data[i]->Print(indent + 1);
         fprintf(OUT, ","); 
     }
     fprintf(OUT, "\b \n");
@@ -102,7 +100,8 @@ void JString::Print() const {
 
 JString::JString(char* source) {
     RetweetUser = Str_c::makeEmpty();
-    Text = Str_c::makeEmpty(); // normally we should do reserve here
+    Text = Str_c::makeEmpty();
+    Hashtags.init();
     const int sourcelen = strlen(source);
 
     Length = 0;
@@ -384,18 +383,17 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     }
 
     // The hashtags found in the entities array.
-    std::vector<HashTagData>& Tags = ExMembers.Entities->ExMembers.Hashtags->Hashtags;
+    Vec_Hashtags* EntitiesTags = &ExMembers.Entities->ExMembers.Hashtags->Hashtags;
 
     // All that is left is to verify hashtag positions on the actual text.
     // The hash tags could be in random order so do N^2 for now. 
-    // TODO: this could be optimized by using unordered_sets instead of vectors
     int i = 0;
     int j = 0;
     for (i = 0; i < TextObj.Hashtags.size(); ++i) {
-        const HashTagData* Outer = &TextObj.Hashtags[i];
+        const HashTagData* Outer = &TextObj.Hashtags.data[i];
         int found = 0;
-        for (j = 0; j < Tags.size(); ++j) {
-            if (Outer->IsEqual(&Tags[j])) {
+        for (j = 0; j < EntitiesTags->size(); ++j) {
+            if (Outer->IsEqual(&EntitiesTags->data[j])) {
                 found = 1;
                 break;
             }
@@ -419,7 +417,7 @@ bool JArray::ExtractHashtags(Str_c* Error) {
     
     int i = 0;
     for (i = 0; i < Elements.size(); ++i) {
-        JValue* Element = Elements[i];
+        JValue* Element = Elements.data[i];
         // Must be an object type
         if (Element->Type != JValueType::Object) {
             Error->append("An element of the array is not an object.");

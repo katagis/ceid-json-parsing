@@ -1,23 +1,28 @@
 #ifndef __JSON_CLASSES_
 #define __JSON_CLASSES_
 
+#define OUT stdout
 #include "c_comp.h"
-#include <vector>
 
 struct JObject;
 struct JArray;
 struct JString;
 
 // Global DB keeping track of ids
-struct JsonDB {
-    std::vector<Str_c> IdStrs;
-    std::vector<long long> UserIds;
+typedef struct JsonDB {
+    Vec_Str IdStrs;
+    Vec_LongLong UserIds;
+
+    JsonDB() {
+        UserIds.init();
+        IdStrs.init();
+    }
 
     // Attempts to Insert an id_str element in the database. Returns false if it already existed
     bool MaybeInsertIdStr(const char* id_str);
     // Attempts to Insert a user_id element in the database. Returns false if it already existed
     bool MaybeInsertUserId(long long id);
-};
+} JsonDB;
 
 enum class JValueType {
     Object,
@@ -65,7 +70,7 @@ enum class JSpecialMember {
 };
 
 // POD utility for storing a starting point of a hashtag and its text.
-struct HashTagData {
+typedef struct HashTagData {
     Str_c Tag;
     unsigned int Begin;
 
@@ -80,10 +85,12 @@ struct HashTagData {
     int IsEqual(HashTagData* other) const {
         return Begin == other->Begin && (strcmp(Tag.ptr, other->Tag.ptr) == 0);
     }
-};
+} HashTagData;
+VecDefine(Vec_Hashtags, HashTagData);
+
 
 // We use our own specialized string struct that stores hash tags, length, byte length.
-struct JString {
+typedef struct JString {
     // 'actuall' length after merging unicode characters as 1 chars.
     // to get byte length use Text.length()
     unsigned int Length;
@@ -91,7 +98,7 @@ struct JString {
     // Converted text.
     Str_c Text;
     // This will contain the hashtags found (if any)
-    std::vector<HashTagData> Hashtags;
+   Vec_Hashtags Hashtags;
     Str_c RetweetUser;
 
     JString(char* cstring);
@@ -99,9 +106,9 @@ struct JString {
     void Print() const;
 
     bool IsRetweet() const;
-};
+} JString;
 
-struct JValue {
+typedef struct JValue {
     JValueType Type;
     JValueData Data;
 
@@ -147,10 +154,10 @@ struct JValue {
         Type = JValueType::Bool;
         Data.BoolData = value;
     }
-};
+} JValue;
 
 // Utility for ranges: arrays with 2 ints
-struct JRange {
+typedef struct JRange {
     long long Begin;
     long long End;
 
@@ -161,16 +168,20 @@ struct JRange {
     JRange(long long b, long long e)
         : Begin(b)
         , End(e) {}
-};
+} JRange;
 
-struct JArray {
-    std::vector<JValue*> Elements;
+VecDefine(Vec_JValuePtr, JValue*);
+typedef struct JArray {
+    Vec_JValuePtr Elements;
     JRange AsRange;
 
     // this is only used if this is a hashtag array.
-    std::vector<HashTagData> Hashtags;
+    Vec_Hashtags Hashtags;
 
-    JArray() {}
+    JArray() {
+        Hashtags.init();
+        Elements.init();
+    }
 
     JArray(long long from, long long to)
         : AsRange(from, to) {
@@ -194,9 +205,9 @@ struct JArray {
     // Attempts to exract and populate the Hashtags vector from the elements.
     // Returns true if this array forms a valid "hashtags" array. 
     bool ExtractHashtags(Str_c* Error);
-};
+} JArray;
 
-struct JMember {
+typedef struct JMember {
     Str_c Name;
     JValue* Value;
     JSpecialMember SpecialType;
@@ -207,7 +218,7 @@ struct JMember {
         : Name(Str_c::make(name))
         , Value(value)
         , SpecialType(type) {}
-};
+} JMember;
 
 
 // A 'special' members struct that holds pointers to specific assignment dependant members
@@ -215,7 +226,7 @@ struct JMember {
 // when any of these pointers are null it means the object does not contain that specific member at all
 //
 // eg: we only care about the actual JString of a member with name 'text' and we only accept JString as its value.
-struct JSpecialMembers {
+typedef struct JSpecialMembers {
     JString* IdStr = nullptr;
     JString* Text = nullptr;
     JString* CreatedAt = nullptr;
@@ -234,10 +245,10 @@ struct JSpecialMembers {
         }
         return UScreenName;
     }
-};
+} JSpecialMembers;
 
 // Special members for extended tweets, same as above
-struct JExSpecialMembers {
+typedef struct JExSpecialMembers {
     JObject* ExTweet = nullptr;
     bool* Truncated = nullptr;
     JRange* DisplayRange = nullptr;
@@ -245,12 +256,17 @@ struct JExSpecialMembers {
     JArray* Hashtags = nullptr;
     JRange* Indices = nullptr;
     JString* FullText = nullptr;
-};
+} JExSpecialMembers;
 
-struct JObject {
-    std::vector<JMember*> Memberlist;
+VecDefine(Vec_JMemberPtr, JMember*);
+typedef struct JObject {
+    Vec_JMemberPtr Memberlist;
     JSpecialMembers Members;
     JExSpecialMembers ExMembers;
+
+    JObject() {
+        Memberlist.init();
+    }
 
     void Print(int indentation) const;
 
@@ -271,15 +287,15 @@ struct JObject {
 private:
     // Use another function for all the ExMembers just for code readability
     void SwitchOnExMember(JMember* member);
-};
+} JObject;
 
-struct JJson {
+typedef struct JJson {
     JValue* JsonData;
 
     JJson(JValue* data)
         : JsonData(data) {}
 
     void Print() const;
-};
+} JJson;
 
 #endif //__JSON_CLASSES_

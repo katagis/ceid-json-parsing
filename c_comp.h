@@ -7,7 +7,7 @@
 
 #define DB(z) fprintf(stderr, "%s\n", z);
 
-struct Str_c {
+typedef struct Str_c {
     char* ptr;
     int len;
 
@@ -69,7 +69,7 @@ struct Str_c {
             addChar(((ucode      ) & 0x3F) | 0x80);
         }
     }
-};
+} Str_c;
 
 static void printMultiple(char c, int times, FILE* fp) {
     int i = 0;
@@ -77,6 +77,54 @@ static void printMultiple(char c, int times, FILE* fp) {
         fputc(c, fp);
     }
 }
+
+
+#define VecDefine(NAME, VEC_TYPE)  \
+typedef struct NAME {  \
+    VEC_TYPE* data; \
+    unsigned int num;   \
+    unsigned int slack; \
+    \
+    void init() {   \
+        data = (VEC_TYPE*) malloc(10 * sizeof(VEC_TYPE));   \
+        num = 0;    \
+        slack = 10; \
+    }   \
+    \
+    unsigned int size() const { \
+        return num; \
+    }   \
+    \
+    void push_back(VEC_TYPE elem) { \
+        if (num + 1 >= slack) { \
+            expand();   \
+        }   \
+        data[num++] = elem; \
+    }   \
+    \
+    void expand() { \
+        if (slack == 0) {   \
+            init(); \
+            return; \
+        }   \
+        slack += slack; \
+        data = (VEC_TYPE*) realloc(data, slack * sizeof(VEC_TYPE)); \
+    }   \
+    \
+    void clear()  { \
+        if (data) { \
+            free(data); \
+        }   \
+        num = 0;    \
+        slack = 0;  \
+    }   \
+} NAME
+
+VecDefine(Vec_LongLong, long long);
+VecDefine(Vec_Str, Str_c);
+
+#define true 1
+#define false 0
 
 
 #endif

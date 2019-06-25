@@ -3,7 +3,7 @@
 %{
 #include "flex_util.h"
 #include "json_classes.h"
-ParserState parse;
+ParserState parser;
 
 #include "y.tab.h"  
 #include <stdio.h>
@@ -17,9 +17,9 @@ ParserState parse;
 // Use everywhere to report the parse match to our parser state
 // the parser state automatically appends this to its internal buffers for lines to allow for
 // the "pretty" error messages.
-#define MATCH parse.Match(yytext)
+#define MATCH PS_Match(yytext)
 // Used to store the text of our special string values.
-#define STORE_TXT yylval.AsText = util::MakeString(yytext)
+#define STORE_TXT yylval.AsText = util_MakeString(yytext)
 
 // The string matcher checks for escaped characters validility and then 
 // extracts the whole quoted strings without doing any processing.
@@ -73,10 +73,10 @@ id_str      \"[0-9]+\"
 {id_str}    { MATCH; STORE_TXT; return D_ID_STR; }
 {date}      { MATCH; STORE_TXT; return D_DATE; }
 
-{string}    { MATCH; yylval.AsText    = util::MakeString(yytext);  return STRING; }
-[0-9]+      { MATCH; yylval.AsInteger = util::MakeInt(yytext);     return POS_INT; }
--[0-9]+     { MATCH; yylval.AsInteger = util::MakeInt(yytext);     return NEG_INT; }
-{float}     { MATCH; yylval.AsFloat   = util::MakeFloat(yytext);   return FLOAT; }
+{string}    { MATCH; yylval.AsText    = util_MakeString(yytext);  return STRING; }
+[0-9]+      { MATCH; yylval.AsInteger = util_MakeInt(yytext);     return POS_INT; }
+-[0-9]+     { MATCH; yylval.AsInteger = util_MakeInt(yytext);     return NEG_INT; }
+{float}     { MATCH; yylval.AsFloat   = util_MakeFloat(yytext);   return FLOAT; }
 "{"         { MATCH; return BRACE_OPEN;  }
 "}"         { MATCH; return BRACE_CLOSE; }
 ":"         { MATCH; return ':'; }
@@ -86,8 +86,8 @@ id_str      \"[0-9]+\"
 "true"      { MATCH; yylval.AsBool = true; return BOOL; }
 "false"     { MATCH; yylval.AsBool = false; return BOOL; }
 "null"      { MATCH; return NULL_VAL; }
-{space}     { MATCH; parse.Match(yytext); }; // Consume all whitespaces
-{newline}   {      ; parse.CountLine(); }
+{space}     { MATCH; PS_Match(yytext); }; // Consume all whitespaces
+{newline}   {      ; PS_CountLine(); }
 
 {errchar}   { MATCH; return INVALID_CHARACTER; } // See *1
 
