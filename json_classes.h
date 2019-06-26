@@ -93,8 +93,6 @@ typedef struct JValue {
     enum JValueType Type;
     union JValueData Data;
 
-    void Print(int indentation) const;
-
     JValue() {
         Type = E_NullVal;
         Data.ObjectData = NULL;
@@ -136,6 +134,8 @@ typedef struct JValue {
         Data.BoolData = value;
     }
 } JValue;
+void Print_JValue(JValue* v, int indentation);
+
 
 // Utility for ranges: arrays with 2 ints
 typedef struct JRange {
@@ -151,12 +151,11 @@ typedef struct JArray {
     // this is only used if this is a hashtag array.
     Vec_Hashtags Hashtags;
 
-    void Print(int indentation) const;
-
-    // Attempts to exract and populate the Hashtags vector from the elements.
-    // Returns true if this array forms a valid "hashtags" array. 
 } JArray;
+void Print_JArray(JArray* a, int indentation);
 
+// Attempts to exract and populate the Hashtags vector from the elements.
+// Returns true if this array forms a valid "hashtags" array. 
 boolean ExtractHashtags(JArray* a, Str_c* Error);
 
 static JArray* Alloc_JArray() {
@@ -240,8 +239,8 @@ typedef struct JObject {
     JSpecialMembers Members;
     JExSpecialMembers ExMembers;
 
-    void Print(int indentation) const;
 } JObject;
+void Print_JObject(JObject* o, int indentation);
 
 // Add a member to the Memberlist and resolve if it needs to popule some Members.* or ExMembers.* field.
 void AddMemberToObject(JObject* o, JMember* member);

@@ -25,25 +25,25 @@ boolean MaybeInsertUserId(long long id) {
     return true;
 }
 
-void JValue::Print(int indent) const {
-    switch(Type) {
+void Print_JValue(JValue* v, int indent) {
+    switch(v->Type) {
         case E_Object:
-            Data.ObjectData->Print(indent);
+            Print_JObject(v->Data.ObjectData, indent);
             break;
         case E_Array:
-            Data.ArrayData->Print(indent);
+            Print_JArray(v->Data.ArrayData, indent);
             break;
         case E_String:
-            fprintf(OUT, "\"%s\"", Data.StringData->Text.ptr);
+            fprintf(OUT, "\"%s\"", v->Data.StringData->Text.ptr);
             break;
         case E_Float:
-            fprintf(OUT, "%f", Data.FloatData);
+            fprintf(OUT, "%f", v->Data.FloatData);
             break;
         case E_Int:
-            fprintf(OUT, "%lli", Data.IntData);
+            fprintf(OUT, "%lli", v->Data.IntData);
             break;
         case E_Bool:
-            if (Data.BoolData) {
+            if (v->Data.BoolData) {
                 fprintf(OUT, "true");
             }
             else {
@@ -56,13 +56,13 @@ void JValue::Print(int indent) const {
     }
 }
 
-void JArray::Print(int indent) const {
+void Print_JArray(JArray* a, int indent) {
     fprintf(OUT, "[ ");      // Print [ to OUT
     int i = 0;
-    for (i = 0; i < Elements.size; ++i) { // for each element as el
+    for (i = 0; i < a->Elements.size; ++i) { // for each element as el
         fprintf(OUT, "\n");
         Indent(indent + 1);    // add (indent + 1) * \t tab characters
-        Elements.data[i]->Print(indent + 1); // call print for value at indent + 1
+        Print_JValue(a->Elements.data[i], indent + 1); // call print for value at indent + 1
         fprintf(OUT, ",");
     }
     fprintf(OUT, "\b \n"); // backspace last comma
@@ -70,14 +70,14 @@ void JArray::Print(int indent) const {
     fprintf(OUT, "]"); 
 }
 
-void JObject::Print(int indent) const {
+void Print_JObject(JObject* o, int indent) {
     fprintf(OUT, "{ "); 
     int i = 0;
-    for (i = Memberlist.size - 1; i >= 0; --i) { // reverse of push_back'ed order.
+    for (i = o->Memberlist.size - 1; i >= 0; --i) { // reverse of push_back'ed order.
         fprintf(OUT, "\n"); 
         Indent(indent + 1);
-        fprintf(OUT, "\"%s\": ", Memberlist.data[i]->Name.ptr);
-        Memberlist.data[i]->Value->Print(indent + 1);
+        fprintf(OUT, "\"%s\": ", o->Memberlist.data[i]->Name.ptr);
+        Print_JValue(o->Memberlist.data[i]->Value, indent + 1);
         fprintf(OUT, ","); 
     }
     fprintf(OUT, "\b \n");

@@ -94,7 +94,7 @@ JsonDB database;
 json: 
     value                       { 
                                   //DBG("JSON PARSED") 
-                                  $$->Print(0);
+                                  Print_JValue($$, 0);
                                   fprintf(OUT, "\n");
                                   
                                   Str_c Error = STR_make("The outer object was parsed properly but its not valid. Error was:\n");
