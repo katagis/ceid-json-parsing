@@ -41,6 +41,7 @@ static void STR_append(Str_c* str, const char* text) {
     str->len += strlen(text);
     str->ptr = (char*) realloc(str->ptr, (str->len + 1) * sizeof(char));
     strcat(str->ptr, text);
+
 }
 
 static void STR_addChar(Str_c* str, char c) {
@@ -81,49 +82,28 @@ static void printMultiple(char c, int times, FILE* fp) {
 }
 
 
-#define VecDefine(NAME, VEC_TYPE)  \
+#define VecDefine(NAME, ADDNAME, VEC_TYPE)  \
 typedef struct NAME {  \
     VEC_TYPE* data; \
-    unsigned int num;   \
+    unsigned int size;   \
     unsigned int slack; \
-    \
-    void init() {   \
-        data = (VEC_TYPE*) malloc(10 * sizeof(VEC_TYPE));   \
-        num = 0;    \
-        slack = 10; \
+} NAME; \
+static void ADDNAME(NAME* v, VEC_TYPE elem) { \
+    if (v->slack == 0) {   \
+        v->data = (VEC_TYPE*) malloc(10 * sizeof(VEC_TYPE));   \
+        v->size = 0;    \
+        v->slack = 10; \
     }   \
-    \
-    unsigned int size() const { \
-        return num; \
+    if (v->size + 1 >= v->slack) { \
+        v->slack += v->slack; \
+        v->data = (VEC_TYPE*) realloc(v->data, v->slack * sizeof(VEC_TYPE)); \
     }   \
-    \
-    void push_back(VEC_TYPE elem) { \
-        if (num + 1 >= slack) { \
-            expand();   \
-        }   \
-        data[num++] = elem; \
-    }   \
-    \
-    void expand() { \
-        if (slack == 0) {   \
-            init(); \
-            return; \
-        }   \
-        slack += slack; \
-        data = (VEC_TYPE*) realloc(data, slack * sizeof(VEC_TYPE)); \
-    }   \
-    \
-    void clear()  { \
-        if (data) { \
-            free(data); \
-        }   \
-        num = 0;    \
-        slack = 0;  \
-    }   \
-} NAME
+    v->data[v->size++] = elem; \
+}
 
-VecDefine(Vec_LongLong, long long);
-VecDefine(Vec_Str, Str_c);
+VecDefine(Vec_LongLong, VLL_add, long long);
+VecDefine(Vec_Str, VS_add, Str_c);
+
 
 #define true 1
 #define false 0

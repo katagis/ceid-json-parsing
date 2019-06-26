@@ -14,8 +14,8 @@ typedef struct JsonDB {
     Vec_LongLong UserIds;
 
     JsonDB() {
-        UserIds.init();
-        IdStrs.init();
+        UserIds.slack = 0;
+        IdStrs.slack = 0;
     }
 
     // Attempts to Insert an id_str element in the database. Returns false if it already existed
@@ -82,7 +82,7 @@ typedef struct HashTagData {
         return Begin == other->Begin && (strcmp(Tag.ptr, other->Tag.ptr) == 0);
     }
 } HashTagData;
-VecDefine(Vec_Hashtags, HashTagData);
+VecDefine(Vec_Hashtags, VH_add, HashTagData);
 
 
 // We use our own specialized string struct that stores hash tags, length, byte length.
@@ -166,7 +166,7 @@ typedef struct JRange {
         , End(e) {}
 } JRange;
 
-VecDefine(Vec_JValuePtr, JValue*);
+VecDefine(Vec_JValuePtr, VVP_add, JValue*);
 typedef struct JArray {
     Vec_JValuePtr Elements;
     JRange AsRange;
@@ -175,20 +175,20 @@ typedef struct JArray {
     Vec_Hashtags Hashtags;
 
     JArray() {
-        Hashtags.init();
-        Elements.init();
+        Hashtags.slack = 0;
+        Elements.slack = 0;
     }
 
     JArray(long long from, long long to)
         : AsRange(from, to) {
             // Watch out the order here...
             // We 'emulate' our parsing and push back in reverse order.
-            Elements.push_back(new JValue(to));
-            Elements.push_back(new JValue(from));
+            VVP_add(&Elements, new JValue(to));
+            VVP_add(&Elements, new JValue(from));
         }
 
     void AddValue(JValue* value) {
-        Elements.push_back(value);
+        VVP_add(&Elements, value);
     }
 
     // Test an array to see if it is a valid "IntRange"
@@ -254,14 +254,14 @@ typedef struct JExSpecialMembers {
     JString* FullText = nullptr;
 } JExSpecialMembers;
 
-VecDefine(Vec_JMemberPtr, JMember*);
+VecDefine(Vec_JMemberPtr, VMP_add, JMember*);
 typedef struct JObject {
     Vec_JMemberPtr Memberlist;
     JSpecialMembers Members;
     JExSpecialMembers ExMembers;
 
     JObject() {
-        Memberlist.init();
+        Memberlist.slack = 0;
     }
 
     void Print(int indentation) const;

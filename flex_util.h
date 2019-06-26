@@ -25,11 +25,12 @@ extern ParserState parser;
 
 static void PS_Init() {
     parser.LineNum = 0;
-    parser.LineTexts.init();
+    parser.LineTexts.slack = 0;
+    VS_add(&parser.LineTexts, STR_makeEmpty());
 }
 
 static void PS_Free() {
-    parser.LineTexts.clear();
+    free(parser.LineTexts.data);
     STR_clear(&parser.LastMatch);
 }
 
@@ -43,7 +44,7 @@ static void PS_Match(char* text) {
 // Once we found a \n
 static void PS_CountLine() {
     ++parser.LineNum;
-    parser.LineTexts.push_back(STR_makeEmpty());
+    VS_add(&parser.LineTexts, STR_makeEmpty());
 }
 
 // Prints a "pretty" formatted line

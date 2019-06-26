@@ -6,22 +6,22 @@ void Indent(int num) {
 }
 
 boolean JsonDB::MaybeInsertIdStr(const char* data) {
-    for (int i = 0; i < IdStrs.size(); ++i) {
+    for (int i = 0; i < IdStrs.size; ++i) {
         if (strcmp(data, IdStrs.data[i].ptr) == 0) {
             return false;
         }
     }
-    IdStrs.push_back(STR_make(data));
+    VS_add(&IdStrs, STR_make(data));
     return true;
 }
 
 boolean JsonDB::MaybeInsertUserId(long long id) {
-    for (int i = 0; i < UserIds.size(); ++i) {
+    for (int i = 0; i < UserIds.size; ++i) {
         if (UserIds.data[i] == id) {
             return false;
         }
     }
-    UserIds.push_back(id);
+    VLL_add(&UserIds, id);
     return true;
 }
 
@@ -59,7 +59,7 @@ void JValue::Print(int indent) const {
 void JArray::Print(int indent) const {
     fprintf(OUT, "[ ");      // Print [ to OUT
     int i = 0;
-    for (i = 0; i < Elements.size(); ++i) { // for each element as el
+    for (i = 0; i < Elements.size; ++i) { // for each element as el
         fprintf(OUT, "\n");
         Indent(indent + 1);    // add (indent + 1) * \t tab characters
         Elements.data[i]->Print(indent + 1); // call print for value at indent + 1
@@ -78,7 +78,7 @@ void JMember::Print(int indentation) const {
 void JObject::Print(int indent) const {
     fprintf(OUT, "{ "); 
     int i = 0;
-    for (i = Memberlist.size() - 1; i >= 0; --i) { // reverse of push_back'ed order.
+    for (i = Memberlist.size - 1; i >= 0; --i) { // reverse of push_back'ed order.
         fprintf(OUT, "\n"); 
         Indent(indent + 1);
         Memberlist.data[i]->Print(indent + 1);
@@ -101,7 +101,7 @@ void JString::Print() const {
 JString::JString(char* source) {
     RetweetUser = STR_makeEmpty();
     Text = STR_makeEmpty();
-    Hashtags.init();
+    Hashtags.slack = 0;
     const int sourcelen = strlen(source);
 
     Length = 0;
@@ -208,7 +208,7 @@ JString::JString(char* source) {
                 // We have a valid hashtag.
                 // Assumes indices count escaped sequences as 1 character. (eg: "text"="/u2330 #abc" starts at 2)
                 hashtag.Begin = Length; // conatins the '#' param
-                Hashtags.push_back(hashtag);
+                VH_add(&Hashtags, hashtag);
             } // the rest of the code works both for empty or non-empty TempHashtag
 
             STR_addChar(&Text, '#');
@@ -256,7 +256,7 @@ void JObject::AddMember(JMember* member) {
     //    Text = JString*     - value of 'text' json field
     //    User = JObject*     - value of 'user' json field
     //    
-    Memberlist.push_back(member);
+    VMP_add(&Memberlist, member);
     switch(member->SpecialType) {
         case JSpecialMember::IdStr:         Members.IdStr       = member->Value->Data.StringData; break;
         case JSpecialMember::Text:          Members.Text        = member->Value->Data.StringData; break;
@@ -370,10 +370,10 @@ boolean JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
 
     int HashtagsInArray = 0;
     if (ExMembers.Entities) {
-        HashtagsInArray = ExMembers.Entities->ExMembers.Hashtags->Hashtags.size();
+        HashtagsInArray = ExMembers.Entities->ExMembers.Hashtags->Hashtags.size;
     }
 
-    if (HashtagsInArray != TextObj.Hashtags.size()) {
+    if (HashtagsInArray != TextObj.Hashtags.size) {
         STR_append(FailMessage, "Hashtags found in text did not match all the hashtags in the entites.");
         return false;
     }
@@ -390,10 +390,10 @@ boolean JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     // The hash tags could be in random order so do N^2 for now. 
     int i = 0;
     int j = 0;
-    for (i = 0; i < TextObj.Hashtags.size(); ++i) {
+    for (i = 0; i < TextObj.Hashtags.size; ++i) {
         const HashTagData* Outer = &TextObj.Hashtags.data[i];
         int found = 0;
-        for (j = 0; j < EntitiesTags->size(); ++j) {
+        for (j = 0; j < EntitiesTags->size; ++j) {
             if (Outer->IsEqual(&EntitiesTags->data[j])) {
                 found = 1;
                 break;
@@ -417,7 +417,7 @@ boolean JArray::ExtractHashtags(Str_c* Error) {
     // Actual checking for hashtag locations cannot be performed at this stage
     
     int i = 0;
-    for (i = 0; i < Elements.size(); ++i) {
+    for (i = 0; i < Elements.size; ++i) {
         JValue* Element = Elements.data[i];
         // Must be an object type
         if (Element->Type != JValueType::Object) {
@@ -446,7 +446,7 @@ boolean JArray::ExtractHashtags(Str_c* Error) {
         Data.Tag = STR_make(Subobject->Members.Text->Text.ptr);
         Data.Begin = Subobject->ExMembers.Indices->Begin;
 
-        Hashtags.push_back(Data);
+        VH_add(&Hashtags, Data);
     }
     return true;
 }
