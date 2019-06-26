@@ -31,16 +31,17 @@ enum JValueType {
     E_NullVal
 };
 
+struct JObject;
+struct JArray;
+struct JString;
+
 union JValueData {
-    JObject* ObjectData;
-    JArray* ArrayData;
-    JString* StringData;
+    struct JObject* ObjectData;
+    struct JArray* ArrayData;
+    struct JString* StringData;
     float FloatData;
     long long IntData;
     boolean BoolData;
-    
-    JValueData() {};
-    ~JValueData() {};
 };
 
 // Special members are all the members required for the assignment.
@@ -70,17 +71,8 @@ enum JSpecialMember {
 typedef struct HashTagData {
     Str_c Tag;
     unsigned int Begin;
-
-    unsigned int GetEnd() const {
-        return Begin + Tag.len + 1; // offset the '#' character
-    }
-
-    int IsEqual(HashTagData* other) const {
-        return Begin == other->Begin && (strcmp(Tag.ptr, other->Tag.ptr) == 0);
-    }
 } HashTagData;
 VecDefine(Vec_Hashtags, VH_add, HashTagData);
-
 
 // We use our own specialized string struct that stores hash tags, length, byte length.
 typedef struct JString {
@@ -91,14 +83,12 @@ typedef struct JString {
     // Converted text.
     Str_c Text;
     // This will contain the hashtags found (if any)
-   Vec_Hashtags Hashtags;
+    Vec_Hashtags Hashtags;
     Str_c RetweetUser;
 
     JString(char* cstring);
 
     void Print() const;
-
-    boolean IsRetweet() const;
 } JString;
 
 typedef struct JValue {
@@ -184,15 +174,6 @@ typedef struct JArray {
             VVP_add(&Elements, new JValue(from));
         }
 
-    void AddValue(JValue* value) {
-        VVP_add(&Elements, value);
-    }
-
-    // Test an array to see if it is a valid "IntRange"
-    boolean IsRange() const {
-        return AsRange.Begin >= 0;
-    }
-
     void Print(int indentation) const;
 
     // Attempts to exract and populate the Hashtags vector from the elements.
@@ -204,8 +185,6 @@ typedef struct JMember {
     Str_c Name;
     JValue* Value;
     JSpecialMember SpecialType;
-
-    void Print(int indentation) const;
 
     JMember(const char* name, JValue* value, JSpecialMember type = E_None)
         : Name(STR_make(name))
@@ -231,13 +210,6 @@ typedef struct JSpecialMembers {
     long long* UId = nullptr;
 
     JObject* TweetObj = nullptr;
-
-    boolean FormsValidUser(boolean RequireAll = false) const {
-        if (RequireAll) {
-            return UName && UScreenName && ULocation && UId;
-        }
-        return UScreenName != NULL;
-    }
 } JSpecialMembers;
 
 // Special members for extended tweets, same as above
@@ -263,9 +235,6 @@ typedef struct JObject {
 
     void Print(int indentation) const;
 
-    
-    boolean FormsValidRetweetObj() const;
-
     // Add a member to the Memberlist and resolve if it needs to popule some Members.* or ExMembers.* field.
     void AddMember(JMember* member);
 
@@ -277,9 +246,6 @@ typedef struct JObject {
     // extended tweet MUST include valid hashtags as entities if there are any.
     boolean FormsValidExtendedTweetObj(Str_c* FailMessage) const;
 
-private:
-    // Use another function for all the ExMembers just for code readability
-    void SwitchOnExMember(JMember* member);
 } JObject;
 
 typedef struct JJson {
@@ -288,7 +254,6 @@ typedef struct JJson {
     JJson(JValue* data)
         : JsonData(data) {}
 
-    void Print() const;
 } JJson;
 
 #endif //__JSON_CLASSES_

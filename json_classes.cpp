@@ -34,7 +34,7 @@ void JValue::Print(int indent) const {
             Data.ArrayData->Print(indent);
             break;
         case E_String:
-            Data.StringData->Print();
+            fprintf(OUT, "\"%s\"", Data.StringData->Text.ptr);
             break;
         case E_Float:
             fprintf(OUT, "%f", Data.FloatData);
@@ -70,33 +70,20 @@ void JArray::Print(int indent) const {
     fprintf(OUT, "]"); 
 }
 
-void JMember::Print(int indentation) const {
-    fprintf(OUT, "\"%s\": ", Name.ptr);
-    Value->Print(indentation);
-}
-
 void JObject::Print(int indent) const {
     fprintf(OUT, "{ "); 
     int i = 0;
     for (i = Memberlist.size - 1; i >= 0; --i) { // reverse of push_back'ed order.
         fprintf(OUT, "\n"); 
         Indent(indent + 1);
-        Memberlist.data[i]->Print(indent + 1);
+        fprintf(OUT, "\"%s\": ", Memberlist.data[i]->Name.ptr);
+        Memberlist.data[i]->Value->Print(indent + 1);
         fprintf(OUT, ","); 
     }
     fprintf(OUT, "\b \n");
     Indent(indent);
     fprintf(OUT, "}"); 
 }
-
-void JJson::Print() const {
-    JsonData->Print(0);
-    fprintf(OUT, "\n");
-};
-
-void JString::Print() const {
-    fprintf(OUT, "\"%s\"", Text.ptr);
-};
 
 JString::JString(char* source) {
     RetweetUser = STR_makeEmpty();
@@ -242,10 +229,6 @@ JString::JString(char* source) {
     }
 }
 
-boolean JString::IsRetweet() const {
-    return RetweetUser.len > 0;
-}
-
 void JObject::AddMember(JMember* member) {
     // When adding a member if it is special we populate the specific Object Field with its data.
     // the final (simplified) JObject outline looks something like this after we are done adding members.
@@ -267,34 +250,14 @@ void JObject::AddMember(JMember* member) {
         case E_ULocation:     Members.ULocation   = member->Value->Data.StringData; break;
         case E_UId:           Members.UId         = &member->Value->Data.IntData; break;
         case E_TweetObj:      Members.TweetObj    = member->Value->Data.ObjectData; break;
-        default:
-            SwitchOnExMember(member);
-    }
-}
-
-void JObject::SwitchOnExMember(JMember* member) {
-    switch(member->SpecialType) {
         case E_ExTweet:       ExMembers.ExTweet       = member->Value->Data.ObjectData; break;
         case E_Truncated:     ExMembers.Truncated     = &member->Value->Data.BoolData; break;
         case E_DisplayRange:  ExMembers.DisplayRange  = &member->Value->Data.ArrayData->AsRange; break;
         case E_Entities:      ExMembers.Entities      = member->Value->Data.ObjectData; break;
         case E_Hashtags:      ExMembers.Hashtags      = member->Value->Data.ArrayData; break;
-        case E_Indices:       ExMembers.Indices      = &member->Value->Data.ArrayData->AsRange; break;
+        case E_Indices:       ExMembers.Indices       = &member->Value->Data.ArrayData->AsRange; break;
         case E_FullText:      ExMembers.FullText      = member->Value->Data.StringData; break;
     }
-}
-
-boolean JObject::FormsValidRetweetObj() const {
-    // To be a valid "tweet" object we need at least valid "text" and "user" fields.
-    if (!Members.Text || !Members.User) {
-        return false;
-    }
-    // Now that we have them we also need to check if the text contains RT @.
-    // At this level we cannot check if the @Username is the correct username yet.
-    if (!Members.Text->RetweetUser.len) {
-        return false;
-    }
-    return true;
 }
 
 boolean JObject::FormsValidOuterObject(Str_c* FailMessage) const {
@@ -394,7 +357,13 @@ boolean JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
         const HashTagData* Outer = &TextObj.Hashtags.data[i];
         int found = 0;
         for (j = 0; j < EntitiesTags->size; ++j) {
-            if (Outer->IsEqual(&EntitiesTags->data[j])) {
+            HashTagData* other = &EntitiesTags->data[j];  
+            
+            int equal = 
+                Outer->Begin == other->Begin && 
+                (strcmp(Outer->Tag.ptr, other->Tag.ptr) == 0);
+
+            if (equal) {
                 found = 1;
                 break;
             }

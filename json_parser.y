@@ -96,7 +96,9 @@ json:
     value                       { 
                                   //DBG("JSON PARSED") 
                                   $$ = new JJson($1); 
-                                  $$->Print();
+                                  $$->JsonData->Print(0);
+                                  fprintf(OUT, "\n");
+                                  
                                   Str_c Error = STR_make("The outer object was parsed properly but its not valid. Error was:\n");
                                   if (!$1->Data.ObjectData->FormsValidOuterObject(&Error)) {
                                       PS_ReportError(Error.ptr);
@@ -144,10 +146,12 @@ array:
     '[' values ']'              { $$ = $2; }
     | '[' ']'                   { $$ = new JArray(); }
     ;
-
+//
+//         VVP_add(&Elements, value);
+//
 values:
-    value                       { $$ = new JArray(); $$->AddValue($1); }
-    | value ',' values          { $$ = $3;           $$->AddValue($1); }
+    value                       { $$ = new JArray(); VVP_add(&$$->Elements, $1); }
+    | value ',' values          { $$ = $3;           VVP_add(&$$->Elements, $1); }
     ;
 
 special_intrange: 
@@ -194,8 +198,17 @@ special_member:
                                         YYERROR;
                                     }
                                 }
-    | F_USER ':' object         { 
-                                    if ($3->Members.FormsValidUser(false)) {
+    | F_USER ':' object         {
+                                    int isValidUser = 0;
+                                    
+                                    // isValidUser =   // allo erwtima
+                                    //        $3->Members.UName
+                                    //     && $3->Members.UScreenName 
+                                    //     && $3->Members.ULocation
+                                    //     && $3->Members.UId;
+                                    isValidUser = $3->Members.UScreenName != NULL;
+
+                                    if (isValidUser) {
                                         $$ = new JMember($1, new JValue($3), E_User);
                                     }
                                     else {
@@ -235,7 +248,10 @@ special_member:
                                     $$ = new JMember($1, new JValue($3));
                                 }
     | F_RT_TWEET ':' object     {
-                                    if ($3->FormsValidRetweetObj()) {
+                                    if ($3->Members.Text 
+                                        && $3->Members.User 
+                                        && $3->Members.Text->RetweetUser.len) {
+                                            
                                         $$ = new JMember($1, new JValue($3), E_TweetObj);
                                     }
                                     else {
