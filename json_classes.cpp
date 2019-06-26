@@ -5,17 +5,17 @@ void Indent(int num) {
     printMultiple(' ', num * 2, OUT);
 }
 
-bool JsonDB::MaybeInsertIdStr(const char* data) {
+boolean JsonDB::MaybeInsertIdStr(const char* data) {
     for (int i = 0; i < IdStrs.size(); ++i) {
         if (strcmp(data, IdStrs.data[i].ptr) == 0) {
             return false;
         }
     }
-    IdStrs.push_back(Str_c::make(data));
+    IdStrs.push_back(STR_make(data));
     return true;
 }
 
-bool JsonDB::MaybeInsertUserId(long long id) {
+boolean JsonDB::MaybeInsertUserId(long long id) {
     for (int i = 0; i < UserIds.size(); ++i) {
         if (UserIds.data[i] == id) {
             return false;
@@ -99,8 +99,8 @@ void JString::Print() const {
 };
 
 JString::JString(char* source) {
-    RetweetUser = Str_c::makeEmpty();
-    Text = Str_c::makeEmpty();
+    RetweetUser = STR_makeEmpty();
+    Text = STR_makeEmpty();
     Hashtags.init();
     const int sourcelen = strlen(source);
 
@@ -114,7 +114,7 @@ JString::JString(char* source) {
 
             switch (esc) {
                 case 'n': {
-                    Text.addChar('\n');
+                    STR_addChar(&Text, '\n');
                     Length++;
                     i++;
                     break;
@@ -123,7 +123,7 @@ JString::JString(char* source) {
                     // we are sure that this will always read the correct number of bytes because we check for this in our lexer.
                     // explicit type ensures we have enough width and correct representation for the conversion
                     long u_code = strtol(&source[i+2], nullptr, 16);
-                    Text.appendAsUtf8(u_code);
+                    STR_appendAsUtf8(&Text, u_code);
 
                     Length++; // Count this as 1 'actual' character
                     i += 5;   // increase by characters read after \ (eg: u2345)
@@ -131,7 +131,7 @@ JString::JString(char* source) {
                 }
                 default: {
                     // All other cases just push the character that was escaped.
-                    Text.addChar(esc);
+                    STR_addChar(&Text, esc);
                     Length++;
                     i++;
                     break;
@@ -141,41 +141,41 @@ JString::JString(char* source) {
         else if (c == '%') {
             // Care here to not go out of bounds, its possible to have "... %\0"
             // it is assumed that what does not match our 5 special characters gets added as literal text.
-            bool FoundMatch = false;
+            boolean FoundMatch = false;
             
             if (source[i+1] == '2') {
                 // source[i+2] is not out of bounds here. (it can be '\0')
                 switch(source[i+2]) {
                     case 'B': {
-                        Text.addChar('+');
+                        STR_addChar(&Text, '+');
                         Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case '1': {
-                        Text.addChar('!');
+                        STR_addChar(&Text, '!');
                         Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case '0': {
-                        Text.addChar(' ');
+                        STR_addChar(&Text, ' ');
                         Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case 'C': {
-                        Text.addChar(',');
+                        STR_addChar(&Text, ',');
                         Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case '6': {
-                        Text.addChar('&');
+                        STR_addChar(&Text, '&');
                         Length++;
                         i += 2;
                         FoundMatch = true;
@@ -186,20 +186,21 @@ JString::JString(char* source) {
 
             // if no match found just add '%'
             if (!FoundMatch) {
-                Text.addChar(c);
+                STR_addChar(&Text, c);
                 Length++;
             }
         }
         else if (c == '#') {
             // Hashtag begins here.
             HashTagData hashtag;
+            hashtag.Tag = STR_makeEmpty();
             char *readptr = &source[i+1];
             while((*readptr >= 'a' && *readptr <= 'z') || // Allow a-z
                   (*readptr >= 'A' && *readptr <= 'Z') || // Allow A-Z
                   (*readptr >= '0' && *readptr <= '9') || // Allow 0-9
                   *readptr == '_')  // Allow underscore
             {                                           // Everything else stops the hashtag
-                hashtag.Tag.addChar(*readptr);
+                STR_addChar(&hashtag.Tag, *readptr);
                 readptr++;
             }
             
@@ -210,15 +211,15 @@ JString::JString(char* source) {
                 Hashtags.push_back(hashtag);
             } // the rest of the code works both for empty or non-empty TempHashtag
 
-            Text.addChar('#');
-            Text.append(hashtag.Tag.ptr);
+            STR_addChar(&Text, '#');
+            STR_append(&Text, hashtag.Tag.ptr);
 
             Length += hashtag.Tag.len + 1; // Count unicode formatted characters added to text.
 
             i += hashtag.Tag.len; // Forward by the length of the hashtag
         }
         else {
-            Text.addChar(c);
+            STR_addChar(&Text, c);
             Length++;
         }
     }
@@ -235,13 +236,13 @@ JString::JString(char* source) {
                 (*readptr > '0' && *readptr < '9') || // Allow 0-9
                  *readptr == '_')  // Allow underscore
         {
-            RetweetUser.addChar(*readptr);
+            STR_addChar(&RetweetUser, *readptr);
             readptr++;
         }
     }
 }
 
-bool JString::IsRetweet() const {
+boolean JString::IsRetweet() const {
     return RetweetUser.len > 0;
 }
 
@@ -283,7 +284,7 @@ void JObject::SwitchOnExMember(JMember* member) {
     }
 }
 
-bool JObject::FormsValidRetweetObj() const {
+boolean JObject::FormsValidRetweetObj() const {
     // To be a valid "tweet" object we need at least valid "text" and "user" fields.
     if (!Members.Text || !Members.User) {
         return false;
@@ -296,11 +297,11 @@ bool JObject::FormsValidRetweetObj() const {
     return true;
 }
 
-bool JObject::FormsValidOuterObject(Str_c* FailMessage) const {
+boolean JObject::FormsValidOuterObject(Str_c* FailMessage) const {
     
     // Our outer object MUST include IdStr, Text, User, Date.
     if (!Members.IdStr || !Members.Text || !Members.User || !Members.CreatedAt) {
-        FailMessage->append("Missing field IdStr/Text/User/CreatedAt");
+        STR_append(FailMessage, "Missing field IdStr/Text/User/CreatedAt");
         return false;
     }
 
@@ -314,7 +315,7 @@ bool JObject::FormsValidOuterObject(Str_c* FailMessage) const {
     // * an exteneded tweet object 
 
     if (!ExMembers.DisplayRange) {
-        FailMessage->append("Missing display range when truncated == true.");
+        STR_append(FailMessage, "Missing display range when truncated == true.");
         return false;
     }
 
@@ -323,13 +324,13 @@ bool JObject::FormsValidOuterObject(Str_c* FailMessage) const {
     if (ExMembers.DisplayRange->Begin != 0 ||
         ExMembers.DisplayRange->End != TextSize) {
 
-        FailMessage->append("Display Range did not match the given text.");
+        STR_append(FailMessage, "Display Range did not match the given text.");
         return false;
     }
 
     // Finally check for the extended tweet object. 
     if (!ExMembers.ExTweet) {
-        FailMessage->append("Missing extended tweet when truncated == true.");
+        STR_append(FailMessage, "Missing extended tweet when truncated == true.");
         return false;
     }
 
@@ -340,11 +341,11 @@ bool JObject::FormsValidOuterObject(Str_c* FailMessage) const {
     return true;
 }
 
-bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
+boolean JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
 
     // Require full_text and display range.
     if (!ExMembers.FullText || !ExMembers.DisplayRange) {
-        FailMessage->append("Missing 'full_text' and/or 'display_text_range'.");
+        STR_append(FailMessage, "Missing 'full_text' and/or 'display_text_range'.");
         return false;
     }
 
@@ -358,7 +359,7 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
             "Display Range did not match the given full_text.\nText Size: %d DisplayRange: [%lli, %lli]",
             TextSize, ExMembers.DisplayRange->Begin, ExMembers.DisplayRange->End
         );
-        FailMessage->append(Message);
+        STR_append(FailMessage, Message);
         return false;
     }
     
@@ -373,7 +374,7 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     }
 
     if (HashtagsInArray != TextObj.Hashtags.size()) {
-        FailMessage->append("Hashtags found in text did not match all the hashtags in the entites.");
+        STR_append(FailMessage, "Hashtags found in text did not match all the hashtags in the entites.");
         return false;
     }
 
@@ -402,7 +403,7 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
         if (!found) {
             char AddedStr[200];
             sprintf(AddedStr, "Hashtag: '%s' is missing from the entities array or has incorrect Indices.", Outer->Tag.ptr);
-            FailMessage->append(AddedStr);
+            STR_append(FailMessage, AddedStr);
             return false;
         }
     }
@@ -410,7 +411,7 @@ bool JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     return true;
 }
 
-bool JArray::ExtractHashtags(Str_c* Error) {
+boolean JArray::ExtractHashtags(Str_c* Error) {
     // This array must ONLY include objects that contain 'text', 'indices'
     // the array can be empty.
     // Actual checking for hashtag locations cannot be performed at this stage
@@ -420,14 +421,14 @@ bool JArray::ExtractHashtags(Str_c* Error) {
         JValue* Element = Elements.data[i];
         // Must be an object type
         if (Element->Type != JValueType::Object) {
-            Error->append("An element of the array is not an object.");
+            STR_append(Error, "An element of the array is not an object.");
             return false;
         }
 
         // Now check this object to find if it includes "text" & "indices" they are required.
         JObject* Subobject = Element->Data.ObjectData;
         if (!Subobject->Members.Text || !Subobject->ExMembers.Indices) {
-            Error->append("An element of the array is missing 'text' and/or 'indices'.");
+            STR_append(Error, "An element of the array is missing 'text' and/or 'indices'.");
             return false;
         }
 
@@ -435,14 +436,14 @@ bool JArray::ExtractHashtags(Str_c* Error) {
         // Therefore we need to offset the length by 1
         long long IndiceLength = Subobject->ExMembers.Indices->End - Subobject->ExMembers.Indices->Begin;
         if (IndiceLength != Subobject->Members.Text->Length + 1) {
-            Error->append("Indice range did not match the text length.");
+            STR_append(Error, "Indice range did not match the text length.");
             return false;
 
         }
 
         // Everything is correct. Collect this result and add it to the hashtags vector.
         HashTagData Data;
-        Data.Tag = Str_c::make(Subobject->Members.Text->Text.ptr);
+        Data.Tag = STR_make(Subobject->Members.Text->Text.ptr);
         Data.Begin = Subobject->ExMembers.Indices->Begin;
 
         Hashtags.push_back(Data);

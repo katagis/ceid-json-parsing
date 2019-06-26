@@ -19,9 +19,9 @@ typedef struct JsonDB {
     }
 
     // Attempts to Insert an id_str element in the database. Returns false if it already existed
-    bool MaybeInsertIdStr(const char* id_str);
+    boolean MaybeInsertIdStr(const char* id_str);
     // Attempts to Insert a user_id element in the database. Returns false if it already existed
-    bool MaybeInsertUserId(long long id);
+    boolean MaybeInsertUserId(long long id);
 } JsonDB;
 
 enum class JValueType {
@@ -40,7 +40,7 @@ union JValueData {
     JString* StringData;
     float FloatData;
     long long IntData;
-    bool BoolData;
+    boolean BoolData;
     
     JValueData() {};
     ~JValueData() {};
@@ -74,10 +74,6 @@ typedef struct HashTagData {
     Str_c Tag;
     unsigned int Begin;
 
-    HashTagData() {
-        Tag = Str_c::makeEmpty();
-    }
-
     unsigned int GetEnd() const {
         return Begin + Tag.len + 1; // offset the '#' character
     }
@@ -105,7 +101,7 @@ typedef struct JString {
 
     void Print() const;
 
-    bool IsRetweet() const;
+    boolean IsRetweet() const;
 } JString;
 
 typedef struct JValue {
@@ -150,7 +146,7 @@ typedef struct JValue {
         Data.IntData = num;
     }
 
-    JValue(bool value) {
+    JValue(boolean value) {
         Type = JValueType::Bool;
         Data.BoolData = value;
     }
@@ -196,7 +192,7 @@ typedef struct JArray {
     }
 
     // Test an array to see if it is a valid "IntRange"
-    bool IsRange() const {
+    boolean IsRange() const {
         return AsRange.Begin >= 0;
     }
 
@@ -204,7 +200,7 @@ typedef struct JArray {
 
     // Attempts to exract and populate the Hashtags vector from the elements.
     // Returns true if this array forms a valid "hashtags" array. 
-    bool ExtractHashtags(Str_c* Error);
+    boolean ExtractHashtags(Str_c* Error);
 } JArray;
 
 typedef struct JMember {
@@ -215,7 +211,7 @@ typedef struct JMember {
     void Print(int indentation) const;
 
     JMember(const char* name, JValue* value, JSpecialMember type = JSpecialMember::None)
-        : Name(Str_c::make(name))
+        : Name(STR_make(name))
         , Value(value)
         , SpecialType(type) {}
 } JMember;
@@ -239,18 +235,18 @@ typedef struct JSpecialMembers {
 
     JObject* TweetObj = nullptr;
 
-    bool FormsValidUser(bool RequireAll = false) const {
+    boolean FormsValidUser(boolean RequireAll = false) const {
         if (RequireAll) {
             return UName && UScreenName && ULocation && UId;
         }
-        return UScreenName;
+        return UScreenName != NULL;
     }
 } JSpecialMembers;
 
 // Special members for extended tweets, same as above
 typedef struct JExSpecialMembers {
     JObject* ExTweet = nullptr;
-    bool* Truncated = nullptr;
+    boolean* Truncated = nullptr;
     JRange* DisplayRange = nullptr;
     JObject* Entities = nullptr;
     JArray* Hashtags = nullptr;
@@ -271,18 +267,18 @@ typedef struct JObject {
     void Print(int indentation) const;
 
     
-    bool FormsValidRetweetObj() const;
+    boolean FormsValidRetweetObj() const;
 
     // Add a member to the Memberlist and resolve if it needs to popule some Members.* or ExMembers.* field.
     void AddMember(JMember* member);
 
     // Checks if this JObject forms a valid "outer" object 
     // ie MUST have text, valid user, IdStr, date AND extra if truncated = true
-    bool FormsValidOuterObject(Str_c* FailMessage) const;
+    boolean FormsValidOuterObject(Str_c* FailMessage) const;
     
     // Checks if this JObject forms a valid "extended tweet" object
     // extended tweet MUST include valid hashtags as entities if there are any.
-    bool FormsValidExtendedTweetObj(Str_c* FailMessage) const;
+    boolean FormsValidExtendedTweetObj(Str_c* FailMessage) const;
 
 private:
     // Use another function for all the ExMembers just for code readability

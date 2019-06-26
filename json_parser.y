@@ -27,7 +27,7 @@ JsonDB database;
     long long AsInteger;
     float AsFloat;
     char* AsText;
-    bool AsBool;
+    boolean AsBool;
     JValue* AsJValue;
     JArray* AsJArray;
     JMember* AsJMember;
@@ -97,10 +97,10 @@ json:
                                   //DBG("JSON PARSED") 
                                   $$ = new JJson($1); 
                                   $$->Print();
-                                  Str_c Error = Str_c::make("The outer object was parsed properly but its not valid. Error was:\n");
+                                  Str_c Error = STR_make("The outer object was parsed properly but its not valid. Error was:\n");
                                   if (!$1->Data.ObjectData->FormsValidOuterObject(&Error)) {
                                       PS_ReportError(Error.ptr);
-                                      Error.clear();
+                                      STR_clear(&Error);
                                       YYERROR;
                                   }
                                   else {
@@ -221,13 +221,13 @@ special_member:
                                         // "tweet"->"text" [@User]
                                         const char* RetweetAtFound = $3->Members.TweetObj->Members.Text->RetweetUser.ptr; 
                                         if (strcmp(OriginalTweetAuthor, RetweetAtFound) != 0) {
-                                            Str_c Error = Str_c::make("Retweet status object ending here is invalid. RT @ user '");
-                                            Error.append(RetweetAtFound);
-                                            Error.append("' is not the same as the original tweet user. '");
-                                            Error.append(OriginalTweetAuthor);
-                                            Error.append("'");
+                                            Str_c Error = STR_make("Retweet status object ending here is invalid. RT @ user '");
+                                            STR_append(&Error, RetweetAtFound);
+                                            STR_append(&Error, "' is not the same as the original tweet user. '");
+                                            STR_append(&Error, OriginalTweetAuthor);
+                                            STR_append(&Error, "'");
                                             PS_ReportError(Error.ptr);
-                                            Error.clear();
+                                            STR_clear(&Error);
                                             YYERROR;
                                         }
                                     }
@@ -245,10 +245,10 @@ special_member:
                                     }
                                 }
     | F_ET_DECLARATION ':' object   { 
-                                        Str_c Error = Str_c::make("Extended tweet object ending here is invalid: ");
+                                        Str_c Error = STR_make("Extended tweet object ending here is invalid: ");
                                         if (!$3->FormsValidExtendedTweetObj(&Error)) {
                                             PS_ReportError(Error.ptr);
-                                            Error.clear();
+                                            STR_clear(&Error);
                                             YYERROR;
                                         }
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::ExTweet); 
@@ -263,11 +263,11 @@ special_member:
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::Entities); 
                                     }
     | F_ET_HASHTAGS ':' array       { 
-                                        Str_c Error = Str_c::make("Array ending here is not a valid hastags array: ");
-                                        bool IsValidArray = $3->ExtractHashtags(&Error);
+                                        Str_c Error = STR_make("Array ending here is not a valid hastags array: ");
+                                        boolean IsValidArray = $3->ExtractHashtags(&Error);
                                         if (!IsValidArray) {
                                             PS_ReportError(Error.ptr);
-                                            Error.clear();
+                                            STR_clear(&Error);
                                             YYERROR;
                                         }
                                         $$ = new JMember($1, new JValue($3), JSpecialMember::Hashtags); 

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+
 // Holds parse state, used for reporting errors.
 typedef struct ParserState {
     // The line number we are currently parsing.
@@ -29,20 +30,20 @@ static void PS_Init() {
 
 static void PS_Free() {
     parser.LineTexts.clear();
-    parser.LastMatch.clear();
+    STR_clear(&parser.LastMatch);
 }
 
 // Called always when there is a flex rule match
 static void PS_Match(char* text) {
-    parser.LineTexts.data[parser.LineNum].append(text);
-    parser.LastMatch.clear();
-    parser.LastMatch.append(text);
+    STR_append(&parser.LineTexts.data[parser.LineNum], text);
+    STR_clear(&parser.LastMatch);
+    STR_append(&parser.LastMatch, text);
 }
 
 // Once we found a \n
 static void PS_CountLine() {
     ++parser.LineNum;
-    parser.LineTexts.push_back(Str_c::makeEmpty());
+    parser.LineTexts.push_back(STR_makeEmpty());
 }
 
 // Prints a "pretty" formatted line
