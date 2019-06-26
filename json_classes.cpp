@@ -109,7 +109,7 @@ JString::JString(char* source) {
                 case 'u': {
                     // we are sure that this will always read the correct number of bytes because we check for this in our lexer.
                     // explicit type ensures we have enough width and correct representation for the conversion
-                    long u_code = strtol(&source[i+2], nullptr, 16);
+                    long u_code = strtol(&source[i+2], NULL, 16);
                     STR_appendAsUtf8(&Text, u_code);
 
                     Length++; // Count this as 1 'actual' character

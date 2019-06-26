@@ -32,7 +32,6 @@ JsonDB database;
     JArray* AsJArray;
     JMember* AsJMember;
     JObject* AsJObject;
-    JJson* AsJJson;
 }
 
 %token <AsText> STRING
@@ -77,7 +76,7 @@ JsonDB database;
 %type <AsJArray> array
 %type <AsJMember> member
 %type <AsJObject> object
-%type <AsJJson> json
+%type <AsJValue> json
 
 %type <AsJArray> values
 %type <AsJObject> members
@@ -95,8 +94,7 @@ JsonDB database;
 json: 
     value                       { 
                                   //DBG("JSON PARSED") 
-                                  $$ = new JJson($1); 
-                                  $$->JsonData->Print(0);
+                                  $$->Print(0);
                                   fprintf(OUT, "\n");
                                   
                                   Str_c Error = STR_make("The outer object was parsed properly but its not valid. Error was:\n");
@@ -129,29 +127,27 @@ object:
     '{' members '}'             { 
                                     $$ = $2;
                                 }
-    | '{' '}'                   { $$ = new JObject(); }
+    | '{' '}'                   { $$ = Alloc_JObject(); }
     ;  
 
 members:
-    member                      { $$ = new JObject(); $$->AddMember($1); }
-    | member ',' members        { $$ = $3;            $$->AddMember($1); }
+    member                      { $$ = Alloc_JObject(); $$->AddMember($1); }
+    | member ',' members        { $$ = $3;              $$->AddMember($1); }
     ;
 
 member:
-    STRING ':' value            { $$ = new JMember($1, $3); }
+    STRING ':' value            { $$ = Alloc_JMember($1, $3, E_None); }
     | special_member            { $$ = $1; }   
     ;
 
 array:
     '[' values ']'              { $$ = $2; }
-    | '[' ']'                   { $$ = new JArray(); }
+    | '[' ']'                   { $$ = Alloc_JArray(); }
     ;
-//
-//         VVP_add(&Elements, value);
-//
+
 values:
-    value                       { $$ = new JArray(); VVP_add(&$$->Elements, $1); }
-    | value ',' values          { $$ = $3;           VVP_add(&$$->Elements, $1); }
+    value                       { $$ = Alloc_JArray(); VVP_add(&$$->Elements, $1); }
+    | value ',' values          { $$ = $3;             VVP_add(&$$->Elements, $1); }
     ;
 
 special_intrange: 
@@ -160,14 +156,14 @@ special_intrange:
                                         PS_ReportError("In the range ending here: Begin > End.");
                                         YYERROR;
                                     }
-                                    $$ = new JArray($2, $4); 
+                                    $$ = Alloc_JArrayRange($2, $4); 
                                 }
     ;
 
 special_member:
     F_ID_STR ':' D_ID_STR       { 
                                     if (MaybeInsertIdStr($3)) {
-                                        $$ = new JMember($1, new JValue($3), E_IdStr); 
+                                        $$ = Alloc_JMember($1, new JValue($3), E_IdStr); 
                                     }
                                     else {
                                         PS_ReportError("ID String already exists.");
@@ -177,7 +173,7 @@ special_member:
     | F_TEXT ':' STRING         { 
                                     JString* str = new JString($3);
                                     if (str->Length <= ALLOWED_TEXT_LEN) {
-                                        $$ = new JMember($1, new JValue(str), E_Text); 
+                                        $$ = Alloc_JMember($1, new JValue(str), E_Text); 
                                     }
                                     else {
                                         PS_ReportError("This text field is too long.");
@@ -185,13 +181,13 @@ special_member:
                                         YYERROR;
                                     }
                                 }
-    | F_CREATEDAT ':' D_DATE    { $$ = new JMember($1, new JValue($3), E_CreatedAt); }
-    | F_UNAME ':' STRING        { $$ = new JMember($1, new JValue($3), E_UName); }
-    | F_USCREEN ':' STRING      { $$ = new JMember($1, new JValue($3), E_UScreenName); }
-    | F_ULOCATION ':' STRING    { $$ = new JMember($1, new JValue($3), E_ULocation); }
+    | F_CREATEDAT ':' D_DATE    { $$ = Alloc_JMember($1, new JValue($3), E_CreatedAt); }
+    | F_UNAME ':' STRING        { $$ = Alloc_JMember($1, new JValue($3), E_UName); }
+    | F_USCREEN ':' STRING      { $$ = Alloc_JMember($1, new JValue($3), E_UScreenName); }
+    | F_ULOCATION ':' STRING    { $$ = Alloc_JMember($1, new JValue($3), E_ULocation); }
     | F_UID ':' POS_INT         { 
                                     if (MaybeInsertUserId($3)) {
-                                        $$ = new JMember($1, new JValue($3), E_UId); 
+                                        $$ = Alloc_JMember($1, new JValue($3), E_UId); 
                                     }
                                     else {
                                         PS_ReportError("User ID already exists.");
@@ -209,7 +205,7 @@ special_member:
                                     isValidUser = $3->Members.UScreenName != NULL;
 
                                     if (isValidUser) {
-                                        $$ = new JMember($1, new JValue($3), E_User);
+                                        $$ = Alloc_JMember($1, new JValue($3), E_User);
                                     }
                                     else {
                                         PS_ReportError("User ending here is missing fields. "
@@ -245,14 +241,14 @@ special_member:
                                         }
                                     }
                                     // this will only run if no YYERROR was run.
-                                    $$ = new JMember($1, new JValue($3));
+                                    $$ = Alloc_JMember($1, new JValue($3), E_None);
                                 }
     | F_RT_TWEET ':' object     {
                                     if ($3->Members.Text 
                                         && $3->Members.User 
                                         && $3->Members.Text->RetweetUser.len) {
                                             
-                                        $$ = new JMember($1, new JValue($3), E_TweetObj);
+                                        $$ = Alloc_JMember($1, new JValue($3), E_TweetObj);
                                     }
                                     else {
                                         PS_ReportError("Tweet object ending here is invalid. "
@@ -267,16 +263,16 @@ special_member:
                                             STR_clear(&Error);
                                             YYERROR;
                                         }
-                                        $$ = new JMember($1, new JValue($3), E_ExTweet); 
+                                        $$ = Alloc_JMember($1, new JValue($3), E_ExTweet); 
                                     }
-    | F_ET_TRUNC ':' BOOL           { $$ = new JMember($1, new JValue($3), E_Truncated); }
-    | F_ET_DISPLAYRANGE ':' special_intrange { $$ = new JMember($1, new JValue($3), E_DisplayRange); }
+    | F_ET_TRUNC ':' BOOL           { $$ = Alloc_JMember($1, new JValue($3), E_Truncated); }
+    | F_ET_DISPLAYRANGE ':' special_intrange { $$ = Alloc_JMember($1, new JValue($3), E_DisplayRange); }
     | F_ET_ENTITIES ':' object      { 
                                         if (!$3->ExMembers.Hashtags) {
                                             PS_ReportError("Entities object ending here is missing a 'hashtags' member.");
                                             YYERROR;
                                         }
-                                        $$ = new JMember($1, new JValue($3), E_Entities); 
+                                        $$ = Alloc_JMember($1, new JValue($3), E_Entities); 
                                     }
     | F_ET_HASHTAGS ':' array       { 
                                         Str_c Error = STR_make("Array ending here is not a valid hastags array: ");
@@ -286,13 +282,13 @@ special_member:
                                             STR_clear(&Error);
                                             YYERROR;
                                         }
-                                        $$ = new JMember($1, new JValue($3), E_Hashtags); 
+                                        $$ = Alloc_JMember($1, new JValue($3), E_Hashtags); 
                                     }
-    | F_ET_INDICES ':' special_intrange { $$ = new JMember($1, new JValue($3), E_Indices); }
+    | F_ET_INDICES ':' special_intrange { $$ = Alloc_JMember($1, new JValue($3), E_Indices); }
     | F_ET_FULLTEXT ':' STRING      { 
                                         JString* str = new JString($3);
                                         if (str->Length <= ALLOWED_FULLTEXT_LEN) {
-                                            $$ = new JMember($1, new JValue(str), E_FullText); 
+                                            $$ = Alloc_JMember($1, new JValue(str), E_FullText); 
                                         }
                                         else {
                                             char Error[200];

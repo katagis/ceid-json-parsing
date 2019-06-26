@@ -87,19 +87,17 @@ typedef struct JString {
     Str_c RetweetUser;
 
     JString(char* cstring);
-
-    void Print() const;
 } JString;
 
 typedef struct JValue {
-    JValueType Type;
-    JValueData Data;
+    enum JValueType Type;
+    union JValueData Data;
 
     void Print(int indentation) const;
 
     JValue() {
         Type = E_NullVal;
-        Data.ObjectData = nullptr;
+        Data.ObjectData = NULL;
     }
 
     JValue(JObject* data) {
@@ -143,14 +141,6 @@ typedef struct JValue {
 typedef struct JRange {
     long long Begin;
     long long End;
-
-    JRange()
-        : Begin(-1)
-        , End(-1) {}
-    
-    JRange(long long b, long long e)
-        : Begin(b)
-        , End(e) {}
 } JRange;
 
 VecDefine(Vec_JValuePtr, VVP_add, JValue*);
@@ -161,19 +151,6 @@ typedef struct JArray {
     // this is only used if this is a hashtag array.
     Vec_Hashtags Hashtags;
 
-    JArray() {
-        Hashtags.slack = 0;
-        Elements.slack = 0;
-    }
-
-    JArray(long long from, long long to)
-        : AsRange(from, to) {
-            // Watch out the order here...
-            // We 'emulate' our parsing and push back in reverse order.
-            VVP_add(&Elements, new JValue(to));
-            VVP_add(&Elements, new JValue(from));
-        }
-
     void Print(int indentation) const;
 
     // Attempts to exract and populate the Hashtags vector from the elements.
@@ -181,17 +158,49 @@ typedef struct JArray {
     boolean ExtractHashtags(Str_c* Error);
 } JArray;
 
+static JArray* Alloc_JArray() {
+    JArray* a;
+    a = (JArray*) malloc(sizeof(JArray));
+    a->Hashtags.slack = 0;
+    a->Elements.slack = 0;
+
+    a->AsRange.Begin = -1;
+    a->AsRange.End = -1;
+    return a;
+}
+
+static JArray* Alloc_JArrayRange(long long from, long long to) {
+    JArray* a;
+    a = (JArray*) malloc(sizeof(JArray));
+    a->Hashtags.slack = 0;
+    a->Elements.slack = 0;
+    
+    a->AsRange.Begin = from;
+    a->AsRange.End = to;
+    
+    // Watch out the order here...
+    // We 'emulate' our parsing and push back in reverse order.
+    VVP_add(&a->Elements, new JValue(to));
+    VVP_add(&a->Elements, new JValue(from));
+
+    return a;
+}
+
 typedef struct JMember {
     Str_c Name;
     JValue* Value;
-    JSpecialMember SpecialType;
-
-    JMember(const char* name, JValue* value, JSpecialMember type = E_None)
-        : Name(STR_make(name))
-        , Value(value)
-        , SpecialType(type) {}
+    enum JSpecialMember SpecialType;
 } JMember;
 
+static JMember* Alloc_JMember(const char* name, JValue* value, enum JSpecialMember type) {
+    JMember* m;
+    m = (JMember*) malloc(sizeof(JMember));
+
+    m->Name = STR_make(name);
+    m->Value = value;
+    m->SpecialType = type;
+    return m;
+}
 
 // A 'special' members struct that holds pointers to specific assignment dependant members
 // We don't save the actual metadata but pointers to the values directly
@@ -199,39 +208,36 @@ typedef struct JMember {
 //
 // eg: we only care about the actual JString of a member with name 'text' and we only accept JString as its value.
 typedef struct JSpecialMembers {
-    JString* IdStr = nullptr;
-    JString* Text = nullptr;
-    JString* CreatedAt = nullptr;
-    JObject* User = nullptr;
+    JString* IdStr;
+    JString* Text;
+    JString* CreatedAt;
+    struct JObject* User;
 
-    JString* UName = nullptr;
-    JString* UScreenName = nullptr;
-    JString* ULocation = nullptr;
-    long long* UId = nullptr;
+    JString* UName;
+    JString* UScreenName;
+    JString* ULocation;
+    long long* UId;
 
-    JObject* TweetObj = nullptr;
+    struct JObject* TweetObj;
 } JSpecialMembers;
 
 // Special members for extended tweets, same as above
 typedef struct JExSpecialMembers {
-    JObject* ExTweet = nullptr;
-    boolean* Truncated = nullptr;
-    JRange* DisplayRange = nullptr;
-    JObject* Entities = nullptr;
-    JArray* Hashtags = nullptr;
-    JRange* Indices = nullptr;
-    JString* FullText = nullptr;
+    struct JObject* ExTweet;
+    boolean* Truncated;
+    JRange* DisplayRange;
+    struct JObject* Entities;
+    JArray* Hashtags;
+    JRange* Indices;
+    JString* FullText;
 } JExSpecialMembers;
 
 VecDefine(Vec_JMemberPtr, VMP_add, JMember*);
+
 typedef struct JObject {
     Vec_JMemberPtr Memberlist;
     JSpecialMembers Members;
     JExSpecialMembers ExMembers;
-
-    JObject() {
-        Memberlist.slack = 0;
-    }
 
     void Print(int indentation) const;
 
@@ -248,12 +254,30 @@ typedef struct JObject {
 
 } JObject;
 
-typedef struct JJson {
-    JValue* JsonData;
+static JObject* Alloc_JObject() {
+    JObject* o;
+    o = (JObject*) malloc(sizeof(JObject));
 
-    JJson(JValue* data)
-        : JsonData(data) {}
+    o->Memberlist.slack = 0;
 
-} JJson;
+    o->Members.IdStr = NULL;
+    o->Members.Text = NULL;
+    o->Members.CreatedAt = NULL;
+    o->Members.User = NULL;
+    o->Members.UName = NULL;
+    o->Members.UScreenName = NULL;
+    o->Members.ULocation = NULL;
+    o->Members.UId = NULL;
+    o->Members.TweetObj = NULL;
+
+    o->ExMembers.ExTweet = NULL;
+    o->ExMembers.Truncated = NULL;
+    o->ExMembers.DisplayRange = NULL;
+    o->ExMembers.Entities = NULL;
+    o->ExMembers.Hashtags = NULL;
+    o->ExMembers.Indices = NULL;
+    o->ExMembers.FullText = NULL;
+    return o;
+}
 
 #endif //__JSON_CLASSES_
