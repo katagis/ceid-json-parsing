@@ -92,50 +92,26 @@ JString* Alloc_JString(char* cstring);
 typedef struct JValue {
     enum JValueType Type;
     union JValueData Data;
-
-    JValue() {
-        Type = E_NullVal;
-        Data.ObjectData = NULL;
-    }
-
-    JValue(JObject* data) {
-        Type = E_Object;
-        Data.ObjectData = data;
-    }
-    
-    JValue(JArray* data) {
-        Type = E_Array;
-        Data.ArrayData = data;
-    }
-
-    JValue(char* data) {
-        JString* jstr = Alloc_JString(data);
-        Type = E_String;
-        Data.StringData = jstr;
-    }
-    
-    JValue(JString* data) {
-        Type = E_String;
-        Data.StringData = data;
-    }
-
-    JValue(float num) {
-        Type = E_Float;
-        Data.FloatData = num;
-    }
-
-    JValue(long long num) {
-        Type = E_Int;
-        Data.IntData = num;
-    }
-
-    JValue(boolean value) {
-        Type = E_Bool;
-        Data.BoolData = value;
-    }
 } JValue;
 void Print_JValue(JValue* v, int indentation);
 
+#define DECLARE_VAL_ALLOC(DECLAR, VALUE_TYPE, DATA_ASSIGNMENT) static JValue* DECLAR { \
+    JValue* v = (JValue *) malloc(sizeof(JValue));  \
+    v->Type = VALUE_TYPE;   \
+    v->Data.DATA_ASSIGNMENT; \
+    return v;   \
+}
+
+DECLARE_VAL_ALLOC(JV_Null  ()              , E_NullVal , ObjectData = NULL);
+DECLARE_VAL_ALLOC(JV_Object(JObject* obj)  , E_Object  , ObjectData = obj );
+DECLARE_VAL_ALLOC(JV_Array (JArray* a)     , E_Array   , ArrayData  = a   );
+DECLARE_VAL_ALLOC(JV_String(char* s)       , E_String  , StringData = Alloc_JString(s));
+DECLARE_VAL_ALLOC(JV_StrObj(JString* s)    , E_String  , StringData = s   );
+DECLARE_VAL_ALLOC(JV_Float (float num)     , E_Float   , FloatData  = num );
+DECLARE_VAL_ALLOC(JV_Int   (long long num) , E_Int     , IntData    = num );
+DECLARE_VAL_ALLOC(JV_Bool  (int val)       , E_Bool    , BoolData   = val );
+
+#undef DECLARE_VAL_ALLOC
 
 // Utility for ranges: arrays with 2 ints
 typedef struct JRange {
@@ -180,8 +156,8 @@ static JArray* Alloc_JArrayRange(long long from, long long to) {
     
     // Watch out the order here...
     // We 'emulate' our parsing and push back in reverse order.
-    VVP_add(&a->Elements, new JValue(to));
-    VVP_add(&a->Elements, new JValue(from));
+    VVP_add(&a->Elements, JV_Int(to));
+    VVP_add(&a->Elements, JV_Int(from));
 
     return a;
 }

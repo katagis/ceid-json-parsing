@@ -110,17 +110,17 @@ json:
     ;
 
 value:
-    object                      { $$ = new JValue($1); }
-    | array                     { $$ = new JValue($1); }
-    | STRING                    { $$ = new JValue($1); }
-    | FLOAT                     { $$ = new JValue($1); }
-    | POS_INT                   { $$ = new JValue($1); }
-    | NEG_INT                   { $$ = new JValue($1); }
-    | BOOL                      { $$ = new JValue($1); }
-    | NULL_VAL                  { $$ = new JValue();   }
-    | D_DATE                    { $$ = new JValue($1); }
-    | D_ID_STR                  { $$ = new JValue($1); }
-    | special_asvalues          { $$ = new JValue($1); }
+    object                      { $$ = JV_Object($1); }
+    | array                     { $$ = JV_Array ($1); }
+    | STRING                    { $$ = JV_String($1); }
+    | FLOAT                     { $$ = JV_Float ($1); }
+    | POS_INT                   { $$ = JV_Int   ($1); }
+    | NEG_INT                   { $$ = JV_Int   ($1); }
+    | BOOL                      { $$ = JV_Bool  ($1); }
+    | NULL_VAL                  { $$ = JV_Null  ();   }
+    | D_DATE                    { $$ = JV_String($1); }
+    | D_ID_STR                  { $$ = JV_String($1); }
+    | special_asvalues          { $$ = JV_String($1); }
     ;
 
 object:
@@ -163,7 +163,7 @@ special_intrange:
 special_member:
     F_ID_STR ':' D_ID_STR       { 
                                     if (MaybeInsertIdStr($3)) {
-                                        $$ = Alloc_JMember($1, new JValue($3), E_IdStr); 
+                                        $$ = Alloc_JMember($1, JV_String($3), E_IdStr); 
                                     }
                                     else {
                                         PS_ReportError("ID String already exists.");
@@ -173,7 +173,7 @@ special_member:
     | F_TEXT ':' STRING         { 
                                     JString* str = Alloc_JString($3);
                                     if (str->Length <= ALLOWED_TEXT_LEN) {
-                                        $$ = Alloc_JMember($1, new JValue(str), E_Text); 
+                                        $$ = Alloc_JMember($1, JV_StrObj(str), E_Text); 
                                     }
                                     else {
                                         PS_ReportError("This text field is too long.");
@@ -181,13 +181,13 @@ special_member:
                                         YYERROR;
                                     }
                                 }
-    | F_CREATEDAT ':' D_DATE    { $$ = Alloc_JMember($1, new JValue($3), E_CreatedAt); }
-    | F_UNAME ':' STRING        { $$ = Alloc_JMember($1, new JValue($3), E_UName); }
-    | F_USCREEN ':' STRING      { $$ = Alloc_JMember($1, new JValue($3), E_UScreenName); }
-    | F_ULOCATION ':' STRING    { $$ = Alloc_JMember($1, new JValue($3), E_ULocation); }
+    | F_CREATEDAT ':' D_DATE    { $$ = Alloc_JMember($1, JV_String($3), E_CreatedAt); }
+    | F_UNAME ':' STRING        { $$ = Alloc_JMember($1, JV_String($3), E_UName); }
+    | F_USCREEN ':' STRING      { $$ = Alloc_JMember($1, JV_String($3), E_UScreenName); }
+    | F_ULOCATION ':' STRING    { $$ = Alloc_JMember($1, JV_String($3), E_ULocation); }
     | F_UID ':' POS_INT         { 
                                     if (MaybeInsertUserId($3)) {
-                                        $$ = Alloc_JMember($1, new JValue($3), E_UId); 
+                                        $$ = Alloc_JMember($1, JV_Int($3), E_UId); 
                                     }
                                     else {
                                         PS_ReportError("User ID already exists.");
@@ -205,7 +205,7 @@ special_member:
                                     isValidUser = $3->Members.UScreenName != NULL;
 
                                     if (isValidUser) {
-                                        $$ = Alloc_JMember($1, new JValue($3), E_User);
+                                        $$ = Alloc_JMember($1, JV_Object($3), E_User);
                                     }
                                     else {
                                         PS_ReportError("User ending here is missing fields. "
@@ -241,14 +241,14 @@ special_member:
                                         }
                                     }
                                     // this will only run if no YYERROR was run.
-                                    $$ = Alloc_JMember($1, new JValue($3), E_None);
+                                    $$ = Alloc_JMember($1, JV_Object($3), E_None);
                                 }
     | F_RT_TWEET ':' object     {
                                     if ($3->Members.Text 
                                         && $3->Members.User 
                                         && $3->Members.Text->RetweetUser.len) {
                                             
-                                        $$ = Alloc_JMember($1, new JValue($3), E_TweetObj);
+                                        $$ = Alloc_JMember($1, JV_Object($3), E_TweetObj);
                                     }
                                     else {
                                         PS_ReportError("Tweet object ending here is invalid. "
@@ -263,16 +263,16 @@ special_member:
                                             STR_clear(&Error);
                                             YYERROR;
                                         }
-                                        $$ = Alloc_JMember($1, new JValue($3), E_ExTweet); 
+                                        $$ = Alloc_JMember($1, JV_Object($3), E_ExTweet); 
                                     }
-    | F_ET_TRUNC ':' BOOL           { $$ = Alloc_JMember($1, new JValue($3), E_Truncated); }
-    | F_ET_DISPLAYRANGE ':' special_intrange { $$ = Alloc_JMember($1, new JValue($3), E_DisplayRange); }
+    | F_ET_TRUNC ':' BOOL           { $$ = Alloc_JMember($1, JV_Bool($3), E_Truncated); }
+    | F_ET_DISPLAYRANGE ':' special_intrange { $$ = Alloc_JMember($1, JV_Array($3), E_DisplayRange); }
     | F_ET_ENTITIES ':' object      { 
                                         if (!$3->ExMembers.Hashtags) {
                                             PS_ReportError("Entities object ending here is missing a 'hashtags' member.");
                                             YYERROR;
                                         }
-                                        $$ = Alloc_JMember($1, new JValue($3), E_Entities); 
+                                        $$ = Alloc_JMember($1, JV_Object($3), E_Entities); 
                                     }
     | F_ET_HASHTAGS ':' array       { 
                                         Str_c Error = STR_make("Array ending here is not a valid hastags array: ");
@@ -282,13 +282,13 @@ special_member:
                                             STR_clear(&Error);
                                             YYERROR;
                                         }
-                                        $$ = Alloc_JMember($1, new JValue($3), E_Hashtags); 
+                                        $$ = Alloc_JMember($1, JV_Array($3), E_Hashtags); 
                                     }
-    | F_ET_INDICES ':' special_intrange { $$ = Alloc_JMember($1, new JValue($3), E_Indices); }
+    | F_ET_INDICES ':' special_intrange { $$ = Alloc_JMember($1, JV_Array($3), E_Indices); }
     | F_ET_FULLTEXT ':' STRING      { 
                                         JString* str = Alloc_JString($3);
                                         if (str->Length <= ALLOWED_FULLTEXT_LEN) {
-                                            $$ = Alloc_JMember($1, new JValue(str), E_FullText); 
+                                            $$ = Alloc_JMember($1, JV_StrObj(str), E_FullText); 
                                         }
                                         else {
                                             char Error[200];

@@ -85,7 +85,6 @@ void Print_JObject(JObject* o, int indent) {
     fprintf(OUT, "}"); 
 }
 
-
 JString* Alloc_JString(char* source) {
     JString* s = (JString *)malloc(sizeof(JString));
 
