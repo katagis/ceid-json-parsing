@@ -98,7 +98,7 @@ json:
                                   fprintf(OUT, "\n");
                                   
                                   Str_c Error = STR_make("The outer object was parsed properly but its not valid. Error was:\n");
-                                  if (!$1->Data.ObjectData->FormsValidOuterObject(&Error)) {
+                                  if (!FormsValidOuterObject($1->Data.ObjectData, &Error)) {
                                       PS_ReportError(Error.ptr);
                                       STR_clear(&Error);
                                       YYERROR;
@@ -131,8 +131,8 @@ object:
     ;  
 
 members:
-    member                      { $$ = Alloc_JObject(); $$->AddMember($1); }
-    | member ',' members        { $$ = $3;              $$->AddMember($1); }
+    member                      { $$ = Alloc_JObject(); AddMemberToObject($$, $1); }
+    | member ',' members        { $$ = $3;              AddMemberToObject($$, $1); }
     ;
 
 member:
@@ -171,7 +171,7 @@ special_member:
                                     }
                                 }
     | F_TEXT ':' STRING         { 
-                                    JString* str = new JString($3);
+                                    JString* str = Alloc_JString($3);
                                     if (str->Length <= ALLOWED_TEXT_LEN) {
                                         $$ = Alloc_JMember($1, new JValue(str), E_Text); 
                                     }
@@ -258,7 +258,7 @@ special_member:
                                 }
     | F_ET_DECLARATION ':' object   { 
                                         Str_c Error = STR_make("Extended tweet object ending here is invalid: ");
-                                        if (!$3->FormsValidExtendedTweetObj(&Error)) {
+                                        if (!FormsValidExtendedTweetObj($3, &Error)) {
                                             PS_ReportError(Error.ptr);
                                             STR_clear(&Error);
                                             YYERROR;
@@ -276,7 +276,7 @@ special_member:
                                     }
     | F_ET_HASHTAGS ':' array       { 
                                         Str_c Error = STR_make("Array ending here is not a valid hastags array: ");
-                                        boolean IsValidArray = $3->ExtractHashtags(&Error);
+                                        boolean IsValidArray = ExtractHashtags($3, &Error);
                                         if (!IsValidArray) {
                                             PS_ReportError(Error.ptr);
                                             STR_clear(&Error);
@@ -286,7 +286,7 @@ special_member:
                                     }
     | F_ET_INDICES ':' special_intrange { $$ = Alloc_JMember($1, new JValue($3), E_Indices); }
     | F_ET_FULLTEXT ':' STRING      { 
-                                        JString* str = new JString($3);
+                                        JString* str = Alloc_JString($3);
                                         if (str->Length <= ALLOWED_FULLTEXT_LEN) {
                                             $$ = Alloc_JMember($1, new JValue(str), E_FullText); 
                                         }

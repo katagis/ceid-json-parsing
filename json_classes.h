@@ -85,9 +85,9 @@ typedef struct JString {
     // This will contain the hashtags found (if any)
     Vec_Hashtags Hashtags;
     Str_c RetweetUser;
-
-    JString(char* cstring);
 } JString;
+
+JString* Alloc_JString(char* cstring);
 
 typedef struct JValue {
     enum JValueType Type;
@@ -111,7 +111,7 @@ typedef struct JValue {
     }
 
     JValue(char* data) {
-        JString* jstr = new JString(data);
+        JString* jstr = Alloc_JString(data);
         Type = E_String;
         Data.StringData = jstr;
     }
@@ -155,8 +155,9 @@ typedef struct JArray {
 
     // Attempts to exract and populate the Hashtags vector from the elements.
     // Returns true if this array forms a valid "hashtags" array. 
-    boolean ExtractHashtags(Str_c* Error);
 } JArray;
+
+boolean ExtractHashtags(JArray* a, Str_c* Error);
 
 static JArray* Alloc_JArray() {
     JArray* a;
@@ -240,19 +241,18 @@ typedef struct JObject {
     JExSpecialMembers ExMembers;
 
     void Print(int indentation) const;
-
-    // Add a member to the Memberlist and resolve if it needs to popule some Members.* or ExMembers.* field.
-    void AddMember(JMember* member);
-
-    // Checks if this JObject forms a valid "outer" object 
-    // ie MUST have text, valid user, IdStr, date AND extra if truncated = true
-    boolean FormsValidOuterObject(Str_c* FailMessage) const;
-    
-    // Checks if this JObject forms a valid "extended tweet" object
-    // extended tweet MUST include valid hashtags as entities if there are any.
-    boolean FormsValidExtendedTweetObj(Str_c* FailMessage) const;
-
 } JObject;
+
+// Add a member to the Memberlist and resolve if it needs to popule some Members.* or ExMembers.* field.
+void AddMemberToObject(JObject* o, JMember* member);
+
+// Checks if this JObject forms a valid "outer" object 
+// ie MUST have text, valid user, IdStr, date AND extra if truncated = true
+boolean FormsValidOuterObject(JObject* o, Str_c* FailMessage);
+
+// Checks if this JObject forms a valid "extended tweet" object
+// extended tweet MUST include valid hashtags as entities if there are any.
+boolean FormsValidExtendedTweetObj(JObject* o, Str_c* FailMessage);
 
 static JObject* Alloc_JObject() {
     JObject* o;

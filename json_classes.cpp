@@ -85,13 +85,16 @@ void JObject::Print(int indent) const {
     fprintf(OUT, "}"); 
 }
 
-JString::JString(char* source) {
-    RetweetUser = STR_makeEmpty();
-    Text = STR_makeEmpty();
-    Hashtags.slack = 0;
+
+JString* Alloc_JString(char* source) {
+    JString* s = (JString *)malloc(sizeof(JString));
+
+    s->RetweetUser = STR_makeEmpty();
+    s->Text = STR_makeEmpty();
+    s->Hashtags.slack = 0;
     const int sourcelen = strlen(source);
 
-    Length = 0;
+    s->Length = 0;
     for (int i = 0; i < sourcelen; ++i) {
         char c = source[i];
         
@@ -101,8 +104,8 @@ JString::JString(char* source) {
 
             switch (esc) {
                 case 'n': {
-                    STR_addChar(&Text, '\n');
-                    Length++;
+                    STR_addChar(&s->Text, '\n');
+                    s->Length++;
                     i++;
                     break;
                 }
@@ -110,16 +113,16 @@ JString::JString(char* source) {
                     // we are sure that this will always read the correct number of bytes because we check for this in our lexer.
                     // explicit type ensures we have enough width and correct representation for the conversion
                     long u_code = strtol(&source[i+2], NULL, 16);
-                    STR_appendAsUtf8(&Text, u_code);
+                    STR_appendAsUtf8(&s->Text, u_code);
 
-                    Length++; // Count this as 1 'actual' character
+                    s->Length++; // Count this as 1 'actual' character
                     i += 5;   // increase by characters read after \ (eg: u2345)
                     break;
                 }
                 default: {
                     // All other cases just push the character that was escaped.
-                    STR_addChar(&Text, esc);
-                    Length++;
+                    STR_addChar(&s->Text, esc);
+                    s->Length++;
                     i++;
                     break;
                 }
@@ -134,36 +137,36 @@ JString::JString(char* source) {
                 // source[i+2] is not out of bounds here. (it can be '\0')
                 switch(source[i+2]) {
                     case 'B': {
-                        STR_addChar(&Text, '+');
-                        Length++;
+                        STR_addChar(&s->Text, '+');
+                        s->Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case '1': {
-                        STR_addChar(&Text, '!');
-                        Length++;
+                        STR_addChar(&s->Text, '!');
+                        s->Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case '0': {
-                        STR_addChar(&Text, ' ');
-                        Length++;
+                        STR_addChar(&s->Text, ' ');
+                        s->Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case 'C': {
-                        STR_addChar(&Text, ',');
-                        Length++;
+                        STR_addChar(&s->Text, ',');
+                        s->Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
                     }
                     case '6': {
-                        STR_addChar(&Text, '&');
-                        Length++;
+                        STR_addChar(&s->Text, '&');
+                        s->Length++;
                         i += 2;
                         FoundMatch = true;
                         break;
@@ -173,8 +176,8 @@ JString::JString(char* source) {
 
             // if no match found just add '%'
             if (!FoundMatch) {
-                STR_addChar(&Text, c);
-                Length++;
+                STR_addChar(&s->Text, c);
+                s->Length++;
             }
         }
         else if (c == '#') {
@@ -194,20 +197,20 @@ JString::JString(char* source) {
             if (hashtag.Tag.len > 0) {
                 // We have a valid hashtag.
                 // Assumes indices count escaped sequences as 1 character. (eg: "text"="/u2330 #abc" starts at 2)
-                hashtag.Begin = Length; // conatins the '#' param
-                VH_add(&Hashtags, hashtag);
+                hashtag.Begin = s->Length; // conatins the '#' param
+                VH_add(&s->Hashtags, hashtag);
             } // the rest of the code works both for empty or non-empty TempHashtag
 
-            STR_addChar(&Text, '#');
-            STR_append(&Text, hashtag.Tag.ptr);
+            STR_addChar(&s->Text, '#');
+            STR_append(&s->Text, hashtag.Tag.ptr);
 
-            Length += hashtag.Tag.len + 1; // Count unicode formatted characters added to text.
+            s->Length += hashtag.Tag.len + 1; // Count unicode formatted characters added to text.
 
             i += hashtag.Tag.len; // Forward by the length of the hashtag
         }
         else {
-            STR_addChar(&Text, c);
-            Length++;
+            STR_addChar(&s->Text, c);
+            s->Length++;
         }
     }
 
@@ -223,13 +226,14 @@ JString::JString(char* source) {
                 (*readptr > '0' && *readptr < '9') || // Allow 0-9
                  *readptr == '_')  // Allow underscore
         {
-            STR_addChar(&RetweetUser, *readptr);
+            STR_addChar(&s->RetweetUser, *readptr);
             readptr++;
         }
     }
+    return s;
 }
 
-void JObject::AddMember(JMember* member) {
+void AddMemberToObject(JObject* o, JMember* member) {
     // When adding a member if it is special we populate the specific Object Field with its data.
     // the final (simplified) JObject outline looks something like this after we are done adding members.
     // JObject 
@@ -239,37 +243,37 @@ void JObject::AddMember(JMember* member) {
     //    Text = JString*     - value of 'text' json field
     //    User = JObject*     - value of 'user' json field
     //    
-    VMP_add(&Memberlist, member);
+    VMP_add(&o->Memberlist, member);
     switch(member->SpecialType) {
-        case E_IdStr:         Members.IdStr       = member->Value->Data.StringData; break;
-        case E_Text:          Members.Text        = member->Value->Data.StringData; break;
-        case E_CreatedAt:     Members.CreatedAt   = member->Value->Data.StringData; break;
-        case E_User:          Members.User        = member->Value->Data.ObjectData; break;
-        case E_UName:         Members.UName       = member->Value->Data.StringData; break;
-        case E_UScreenName:   Members.UScreenName = member->Value->Data.StringData; break;
-        case E_ULocation:     Members.ULocation   = member->Value->Data.StringData; break;
-        case E_UId:           Members.UId         = &member->Value->Data.IntData; break;
-        case E_TweetObj:      Members.TweetObj    = member->Value->Data.ObjectData; break;
-        case E_ExTweet:       ExMembers.ExTweet       = member->Value->Data.ObjectData; break;
-        case E_Truncated:     ExMembers.Truncated     = &member->Value->Data.BoolData; break;
-        case E_DisplayRange:  ExMembers.DisplayRange  = &member->Value->Data.ArrayData->AsRange; break;
-        case E_Entities:      ExMembers.Entities      = member->Value->Data.ObjectData; break;
-        case E_Hashtags:      ExMembers.Hashtags      = member->Value->Data.ArrayData; break;
-        case E_Indices:       ExMembers.Indices       = &member->Value->Data.ArrayData->AsRange; break;
-        case E_FullText:      ExMembers.FullText      = member->Value->Data.StringData; break;
+        case E_IdStr:         o->Members.IdStr       = member->Value->Data.StringData; break;
+        case E_Text:          o->Members.Text        = member->Value->Data.StringData; break;
+        case E_CreatedAt:     o->Members.CreatedAt   = member->Value->Data.StringData; break;
+        case E_User:          o->Members.User        = member->Value->Data.ObjectData; break;
+        case E_UName:         o->Members.UName       = member->Value->Data.StringData; break;
+        case E_UScreenName:   o->Members.UScreenName = member->Value->Data.StringData; break;
+        case E_ULocation:     o->Members.ULocation   = member->Value->Data.StringData; break;
+        case E_UId:           o->Members.UId         = &member->Value->Data.IntData; break;
+        case E_TweetObj:      o->Members.TweetObj    = member->Value->Data.ObjectData; break;
+        case E_ExTweet:       o->ExMembers.ExTweet       = member->Value->Data.ObjectData; break;
+        case E_Truncated:     o->ExMembers.Truncated     = &member->Value->Data.BoolData; break;
+        case E_DisplayRange:  o->ExMembers.DisplayRange  = &member->Value->Data.ArrayData->AsRange; break;
+        case E_Entities:      o->ExMembers.Entities      = member->Value->Data.ObjectData; break;
+        case E_Hashtags:      o->ExMembers.Hashtags      = member->Value->Data.ArrayData; break;
+        case E_Indices:       o->ExMembers.Indices       = &member->Value->Data.ArrayData->AsRange; break;
+        case E_FullText:      o->ExMembers.FullText      = member->Value->Data.StringData; break;
     }
 }
 
-boolean JObject::FormsValidOuterObject(Str_c* FailMessage) const {
+boolean FormsValidOuterObject(JObject* o, Str_c* FailMessage) {
     
     // Our outer object MUST include IdStr, Text, User, Date.
-    if (!Members.IdStr || !Members.Text || !Members.User || !Members.CreatedAt) {
+    if (!o->Members.IdStr || !o->Members.Text || !o->Members.User || !o->Members.CreatedAt) {
         STR_append(FailMessage, "Missing field IdStr/Text/User/CreatedAt");
         return false;
     }
 
     // if we dont find a truncated value or found one that == false we are done.
-    if (!ExMembers.Truncated || *ExMembers.Truncated == false) {
+    if (!o->ExMembers.Truncated || *o->ExMembers.Truncated == false) {
         return true;
     }
 
@@ -277,22 +281,22 @@ boolean JObject::FormsValidOuterObject(Str_c* FailMessage) const {
     // * a valid display_text_range [0, Members.Text.Length]
     // * an exteneded tweet object 
 
-    if (!ExMembers.DisplayRange) {
+    if (!o->ExMembers.DisplayRange) {
         STR_append(FailMessage, "Missing display range when truncated == true.");
         return false;
     }
 
     // The display range must be from x->x+Length and x+Length must be less than 
-    unsigned int TextSize = Members.Text->Length;
-    if (ExMembers.DisplayRange->Begin != 0 ||
-        ExMembers.DisplayRange->End != TextSize) {
+    unsigned int TextSize = o->Members.Text->Length;
+    if (o->ExMembers.DisplayRange->Begin != 0 ||
+        o->ExMembers.DisplayRange->End != TextSize) {
 
         STR_append(FailMessage, "Display Range did not match the given text.");
         return false;
     }
 
     // Finally check for the extended tweet object. 
-    if (!ExMembers.ExTweet) {
+    if (!o->ExMembers.ExTweet) {
         STR_append(FailMessage, "Missing extended tweet when truncated == true.");
         return false;
     }
@@ -304,36 +308,36 @@ boolean JObject::FormsValidOuterObject(Str_c* FailMessage) const {
     return true;
 }
 
-boolean JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
+boolean FormsValidExtendedTweetObj(JObject* o, Str_c* FailMessage) {
 
     // Require full_text and display range.
-    if (!ExMembers.FullText || !ExMembers.DisplayRange) {
+    if (!o->ExMembers.FullText || !o->ExMembers.DisplayRange) {
         STR_append(FailMessage, "Missing 'full_text' and/or 'display_text_range'.");
         return false;
     }
 
     // Validate text length with display range
-    unsigned int TextSize = ExMembers.FullText->Length;
-    if (ExMembers.DisplayRange->Begin != 0 ||
-        ExMembers.DisplayRange->End != TextSize) {
+    unsigned int TextSize = o->ExMembers.FullText->Length;
+    if (o->ExMembers.DisplayRange->Begin != 0 ||
+        o->ExMembers.DisplayRange->End != TextSize) {
 
         char Message[200];
         sprintf(Message, 
             "Display Range did not match the given full_text.\nText Size: %d DisplayRange: [%lli, %lli]",
-            TextSize, ExMembers.DisplayRange->Begin, ExMembers.DisplayRange->End
+            TextSize, o->ExMembers.DisplayRange->Begin, o->ExMembers.DisplayRange->End
         );
         STR_append(FailMessage, Message);
         return false;
     }
     
-    const JString& TextObj = *ExMembers.FullText;
+    const JString& TextObj = *o->ExMembers.FullText;
 
     // Even if we have NO hashtags in the text, we still need to verify that
     // there are no recorded hashtags in the array (but only if one exists.)
 
     int HashtagsInArray = 0;
-    if (ExMembers.Entities) {
-        HashtagsInArray = ExMembers.Entities->ExMembers.Hashtags->Hashtags.size;
+    if (o->ExMembers.Entities) {
+        HashtagsInArray = o->ExMembers.Entities->ExMembers.Hashtags->Hashtags.size;
     }
 
     if (HashtagsInArray != TextObj.Hashtags.size) {
@@ -347,7 +351,7 @@ boolean JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     }
 
     // The hashtags found in the entities array.
-    Vec_Hashtags* EntitiesTags = &ExMembers.Entities->ExMembers.Hashtags->Hashtags;
+    Vec_Hashtags* EntitiesTags = &o->ExMembers.Entities->ExMembers.Hashtags->Hashtags;
 
     // All that is left is to verify hashtag positions on the actual text.
     // The hash tags could be in random order so do N^2 for now. 
@@ -380,14 +384,14 @@ boolean JObject::FormsValidExtendedTweetObj(Str_c* FailMessage) const {
     return true;
 }
 
-boolean JArray::ExtractHashtags(Str_c* Error) {
+boolean ExtractHashtags(JArray* a, Str_c* Error) {
     // This array must ONLY include objects that contain 'text', 'indices'
     // the array can be empty.
     // Actual checking for hashtag locations cannot be performed at this stage
     
     int i = 0;
-    for (i = 0; i < Elements.size; ++i) {
-        JValue* Element = Elements.data[i];
+    for (i = 0; i < a->Elements.size; ++i) {
+        JValue* Element = a->Elements.data[i];
         // Must be an object type
         if (Element->Type != E_Object) {
             STR_append(Error, "An element of the array is not an object.");
@@ -415,7 +419,7 @@ boolean JArray::ExtractHashtags(Str_c* Error) {
         Data.Tag = STR_make(Subobject->Members.Text->Text.ptr);
         Data.Begin = Subobject->ExMembers.Indices->Begin;
 
-        VH_add(&Hashtags, Data);
+        VH_add(&a->Hashtags, Data);
     }
     return true;
 }
