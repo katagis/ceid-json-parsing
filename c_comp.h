@@ -81,7 +81,6 @@ static void printMultiple(char c, int times, FILE* fp) {
     }
 }
 
-
 #define VecDefine(NAME, ADDNAME, VEC_TYPE)  \
 typedef struct NAME {  \
     VEC_TYPE* data; \

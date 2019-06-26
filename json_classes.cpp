@@ -5,44 +5,44 @@ void Indent(int num) {
     printMultiple(' ', num * 2, OUT);
 }
 
-boolean JsonDB::MaybeInsertIdStr(const char* data) {
-    for (int i = 0; i < IdStrs.size; ++i) {
-        if (strcmp(data, IdStrs.data[i].ptr) == 0) {
+boolean MaybeInsertIdStr(const char* data) {
+    for (int i = 0; i < database.IdStrs.size; ++i) {
+        if (strcmp(data, database.IdStrs.data[i].ptr) == 0) {
             return false;
         }
     }
-    VS_add(&IdStrs, STR_make(data));
+    VS_add(&database.IdStrs, STR_make(data));
     return true;
 }
 
-boolean JsonDB::MaybeInsertUserId(long long id) {
-    for (int i = 0; i < UserIds.size; ++i) {
-        if (UserIds.data[i] == id) {
+boolean MaybeInsertUserId(long long id) {
+    for (int i = 0; i < database.UserIds.size; ++i) {
+        if (database.UserIds.data[i] == id) {
             return false;
         }
     }
-    VLL_add(&UserIds, id);
+    VLL_add(&database.UserIds, id);
     return true;
 }
 
 void JValue::Print(int indent) const {
     switch(Type) {
-        case JValueType::Object:
+        case E_Object:
             Data.ObjectData->Print(indent);
             break;
-        case JValueType::Array:
+        case E_Array:
             Data.ArrayData->Print(indent);
             break;
-        case JValueType::String:
+        case E_String:
             Data.StringData->Print();
             break;
-        case JValueType::Float:
+        case E_Float:
             fprintf(OUT, "%f", Data.FloatData);
             break;
-        case JValueType::Int:
+        case E_Int:
             fprintf(OUT, "%lli", Data.IntData);
             break;
-        case JValueType::Bool:
+        case E_Bool:
             if (Data.BoolData) {
                 fprintf(OUT, "true");
             }
@@ -50,7 +50,7 @@ void JValue::Print(int indent) const {
                 fprintf(OUT, "false");
             }
             break;
-        case JValueType::NullVal:
+        case E_NullVal:
             fprintf(OUT, "null");
             break;
     }
@@ -258,15 +258,15 @@ void JObject::AddMember(JMember* member) {
     //    
     VMP_add(&Memberlist, member);
     switch(member->SpecialType) {
-        case JSpecialMember::IdStr:         Members.IdStr       = member->Value->Data.StringData; break;
-        case JSpecialMember::Text:          Members.Text        = member->Value->Data.StringData; break;
-        case JSpecialMember::CreatedAt:     Members.CreatedAt   = member->Value->Data.StringData; break;
-        case JSpecialMember::User:          Members.User        = member->Value->Data.ObjectData; break;
-        case JSpecialMember::UName:         Members.UName       = member->Value->Data.StringData; break;
-        case JSpecialMember::UScreenName:   Members.UScreenName = member->Value->Data.StringData; break;
-        case JSpecialMember::ULocation:     Members.ULocation   = member->Value->Data.StringData; break;
-        case JSpecialMember::UId:           Members.UId         = &member->Value->Data.IntData; break;
-        case JSpecialMember::TweetObj:      Members.TweetObj    = member->Value->Data.ObjectData; break;
+        case E_IdStr:         Members.IdStr       = member->Value->Data.StringData; break;
+        case E_Text:          Members.Text        = member->Value->Data.StringData; break;
+        case E_CreatedAt:     Members.CreatedAt   = member->Value->Data.StringData; break;
+        case E_User:          Members.User        = member->Value->Data.ObjectData; break;
+        case E_UName:         Members.UName       = member->Value->Data.StringData; break;
+        case E_UScreenName:   Members.UScreenName = member->Value->Data.StringData; break;
+        case E_ULocation:     Members.ULocation   = member->Value->Data.StringData; break;
+        case E_UId:           Members.UId         = &member->Value->Data.IntData; break;
+        case E_TweetObj:      Members.TweetObj    = member->Value->Data.ObjectData; break;
         default:
             SwitchOnExMember(member);
     }
@@ -274,13 +274,13 @@ void JObject::AddMember(JMember* member) {
 
 void JObject::SwitchOnExMember(JMember* member) {
     switch(member->SpecialType) {
-        case JSpecialMember::ExTweet:       ExMembers.ExTweet       = member->Value->Data.ObjectData; break;
-        case JSpecialMember::Truncated:     ExMembers.Truncated     = &member->Value->Data.BoolData; break;
-        case JSpecialMember::DisplayRange:  ExMembers.DisplayRange  = &member->Value->Data.ArrayData->AsRange; break;
-        case JSpecialMember::Entities:      ExMembers.Entities      = member->Value->Data.ObjectData; break;
-        case JSpecialMember::Hashtags:      ExMembers.Hashtags      = member->Value->Data.ArrayData; break;
-        case JSpecialMember::Indices:       ExMembers.Indices      = &member->Value->Data.ArrayData->AsRange; break;
-        case JSpecialMember::FullText:      ExMembers.FullText      = member->Value->Data.StringData; break;
+        case E_ExTweet:       ExMembers.ExTweet       = member->Value->Data.ObjectData; break;
+        case E_Truncated:     ExMembers.Truncated     = &member->Value->Data.BoolData; break;
+        case E_DisplayRange:  ExMembers.DisplayRange  = &member->Value->Data.ArrayData->AsRange; break;
+        case E_Entities:      ExMembers.Entities      = member->Value->Data.ObjectData; break;
+        case E_Hashtags:      ExMembers.Hashtags      = member->Value->Data.ArrayData; break;
+        case E_Indices:       ExMembers.Indices      = &member->Value->Data.ArrayData->AsRange; break;
+        case E_FullText:      ExMembers.FullText      = member->Value->Data.StringData; break;
     }
 }
 
@@ -420,7 +420,7 @@ boolean JArray::ExtractHashtags(Str_c* Error) {
     for (i = 0; i < Elements.size; ++i) {
         JValue* Element = Elements.data[i];
         // Must be an object type
-        if (Element->Type != JValueType::Object) {
+        if (Element->Type != E_Object) {
             STR_append(Error, "An element of the array is not an object.");
             return false;
         }

@@ -12,26 +12,23 @@ struct JString;
 typedef struct JsonDB {
     Vec_Str IdStrs;
     Vec_LongLong UserIds;
-
-    JsonDB() {
-        UserIds.slack = 0;
-        IdStrs.slack = 0;
-    }
-
-    // Attempts to Insert an id_str element in the database. Returns false if it already existed
-    boolean MaybeInsertIdStr(const char* id_str);
-    // Attempts to Insert a user_id element in the database. Returns false if it already existed
-    boolean MaybeInsertUserId(long long id);
 } JsonDB;
 
-enum class JValueType {
-    Object,
-    Array,
-    String,
-    Float,
-    Int,
-    Bool,
-    NullVal
+extern JsonDB database;
+// Attempts to Insert an id_str element in the database. Returns false if it already existed
+boolean MaybeInsertIdStr(const char* id_str);
+// Attempts to Insert a user_id element in the database. Returns false if it already existed
+boolean MaybeInsertUserId(long long id);
+
+
+enum JValueType {
+    E_Object,
+    E_Array,
+    E_String,
+    E_Float,
+    E_Int,
+    E_Bool,
+    E_NullVal
 };
 
 union JValueData {
@@ -47,26 +44,26 @@ union JValueData {
 };
 
 // Special members are all the members required for the assignment.
-enum class JSpecialMember {
-    None, // Not a special member
-    IdStr,
-    Text,
-    CreatedAt,
-    User,
-    UName,
-    UScreenName,
-    ULocation,
-    UId,
+enum JSpecialMember {
+    E_None, // Not a special member
+    E_IdStr,
+    E_Text,
+    E_CreatedAt,
+    E_User,
+    E_UName,
+    E_UScreenName,
+    E_ULocation,
+    E_UId,
     // Assignment 2a
-    TweetObj,
+    E_TweetObj,
     // Assignment 2b
-    ExTweet,
-    Truncated,
-    DisplayRange,
-    Entities,
-    Hashtags,
-    Indices,
-    FullText
+    E_ExTweet,
+    E_Truncated,
+    E_DisplayRange,
+    E_Entities,
+    E_Hashtags,
+    E_Indices,
+    E_FullText
 };
 
 // POD utility for storing a starting point of a hashtag and its text.
@@ -111,43 +108,43 @@ typedef struct JValue {
     void Print(int indentation) const;
 
     JValue() {
-        Type = JValueType::NullVal;
+        Type = E_NullVal;
         Data.ObjectData = nullptr;
     }
 
     JValue(JObject* data) {
-        Type = JValueType::Object;
+        Type = E_Object;
         Data.ObjectData = data;
     }
     
     JValue(JArray* data) {
-        Type = JValueType::Array;
+        Type = E_Array;
         Data.ArrayData = data;
     }
 
     JValue(char* data) {
         JString* jstr = new JString(data);
-        Type = JValueType::String;
+        Type = E_String;
         Data.StringData = jstr;
     }
     
     JValue(JString* data) {
-        Type = JValueType::String;
+        Type = E_String;
         Data.StringData = data;
     }
 
     JValue(float num) {
-        Type = JValueType::Float;
+        Type = E_Float;
         Data.FloatData = num;
     }
 
     JValue(long long num) {
-        Type = JValueType::Int;
+        Type = E_Int;
         Data.IntData = num;
     }
 
     JValue(boolean value) {
-        Type = JValueType::Bool;
+        Type = E_Bool;
         Data.BoolData = value;
     }
 } JValue;
@@ -210,7 +207,7 @@ typedef struct JMember {
 
     void Print(int indentation) const;
 
-    JMember(const char* name, JValue* value, JSpecialMember type = JSpecialMember::None)
+    JMember(const char* name, JValue* value, JSpecialMember type = E_None)
         : Name(STR_make(name))
         , Value(value)
         , SpecialType(type) {}

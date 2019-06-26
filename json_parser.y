@@ -162,8 +162,8 @@ special_intrange:
 
 special_member:
     F_ID_STR ':' D_ID_STR       { 
-                                    if (database.MaybeInsertIdStr($3)) {
-                                        $$ = new JMember($1, new JValue($3), JSpecialMember::IdStr); 
+                                    if (MaybeInsertIdStr($3)) {
+                                        $$ = new JMember($1, new JValue($3), E_IdStr); 
                                     }
                                     else {
                                         PS_ReportError("ID String already exists.");
@@ -173,7 +173,7 @@ special_member:
     | F_TEXT ':' STRING         { 
                                     JString* str = new JString($3);
                                     if (str->Length <= ALLOWED_TEXT_LEN) {
-                                        $$ = new JMember($1, new JValue(str), JSpecialMember::Text); 
+                                        $$ = new JMember($1, new JValue(str), E_Text); 
                                     }
                                     else {
                                         PS_ReportError("This text field is too long.");
@@ -181,13 +181,13 @@ special_member:
                                         YYERROR;
                                     }
                                 }
-    | F_CREATEDAT ':' D_DATE    { $$ = new JMember($1, new JValue($3), JSpecialMember::CreatedAt); }
-    | F_UNAME ':' STRING        { $$ = new JMember($1, new JValue($3), JSpecialMember::UName); }
-    | F_USCREEN ':' STRING      { $$ = new JMember($1, new JValue($3), JSpecialMember::UScreenName); }
-    | F_ULOCATION ':' STRING    { $$ = new JMember($1, new JValue($3), JSpecialMember::ULocation); }
+    | F_CREATEDAT ':' D_DATE    { $$ = new JMember($1, new JValue($3), E_CreatedAt); }
+    | F_UNAME ':' STRING        { $$ = new JMember($1, new JValue($3), E_UName); }
+    | F_USCREEN ':' STRING      { $$ = new JMember($1, new JValue($3), E_UScreenName); }
+    | F_ULOCATION ':' STRING    { $$ = new JMember($1, new JValue($3), E_ULocation); }
     | F_UID ':' POS_INT         { 
-                                    if (database.MaybeInsertUserId($3)) {
-                                        $$ = new JMember($1, new JValue($3), JSpecialMember::UId); 
+                                    if (MaybeInsertUserId($3)) {
+                                        $$ = new JMember($1, new JValue($3), E_UId); 
                                     }
                                     else {
                                         PS_ReportError("User ID already exists.");
@@ -196,7 +196,7 @@ special_member:
                                 }
     | F_USER ':' object         { 
                                     if ($3->Members.FormsValidUser(false)) {
-                                        $$ = new JMember($1, new JValue($3), JSpecialMember::User);
+                                        $$ = new JMember($1, new JValue($3), E_User);
                                     }
                                     else {
                                         PS_ReportError("User ending here is missing fields. "
@@ -236,7 +236,7 @@ special_member:
                                 }
     | F_RT_TWEET ':' object     {
                                     if ($3->FormsValidRetweetObj()) {
-                                        $$ = new JMember($1, new JValue($3), JSpecialMember::TweetObj);
+                                        $$ = new JMember($1, new JValue($3), E_TweetObj);
                                     }
                                     else {
                                         PS_ReportError("Tweet object ending here is invalid. "
@@ -251,16 +251,16 @@ special_member:
                                             STR_clear(&Error);
                                             YYERROR;
                                         }
-                                        $$ = new JMember($1, new JValue($3), JSpecialMember::ExTweet); 
+                                        $$ = new JMember($1, new JValue($3), E_ExTweet); 
                                     }
-    | F_ET_TRUNC ':' BOOL           { $$ = new JMember($1, new JValue($3), JSpecialMember::Truncated); }
-    | F_ET_DISPLAYRANGE ':' special_intrange { $$ = new JMember($1, new JValue($3), JSpecialMember::DisplayRange); }
+    | F_ET_TRUNC ':' BOOL           { $$ = new JMember($1, new JValue($3), E_Truncated); }
+    | F_ET_DISPLAYRANGE ':' special_intrange { $$ = new JMember($1, new JValue($3), E_DisplayRange); }
     | F_ET_ENTITIES ':' object      { 
                                         if (!$3->ExMembers.Hashtags) {
                                             PS_ReportError("Entities object ending here is missing a 'hashtags' member.");
                                             YYERROR;
                                         }
-                                        $$ = new JMember($1, new JValue($3), JSpecialMember::Entities); 
+                                        $$ = new JMember($1, new JValue($3), E_Entities); 
                                     }
     | F_ET_HASHTAGS ':' array       { 
                                         Str_c Error = STR_make("Array ending here is not a valid hastags array: ");
@@ -270,13 +270,13 @@ special_member:
                                             STR_clear(&Error);
                                             YYERROR;
                                         }
-                                        $$ = new JMember($1, new JValue($3), JSpecialMember::Hashtags); 
+                                        $$ = new JMember($1, new JValue($3), E_Hashtags); 
                                     }
-    | F_ET_INDICES ':' special_intrange { $$ = new JMember($1, new JValue($3), JSpecialMember::Indices); }
+    | F_ET_INDICES ':' special_intrange { $$ = new JMember($1, new JValue($3), E_Indices); }
     | F_ET_FULLTEXT ':' STRING      { 
                                         JString* str = new JString($3);
                                         if (str->Length <= ALLOWED_FULLTEXT_LEN) {
-                                            $$ = new JMember($1, new JValue(str), JSpecialMember::FullText); 
+                                            $$ = new JMember($1, new JValue(str), E_FullText); 
                                         }
                                         else {
                                             char Error[200];
@@ -317,6 +317,14 @@ void parse_args(int argc, char **argv);
 
 void init() {
     PS_Init();
+    database.UserIds.slack = 0;
+    database.IdStrs.slack = 0;
+}
+
+void freeall() {
+    PS_Free();
+    free(database.UserIds.data);
+    free(database.IdStrs.data);
 }
 
 int main (int argc, char **argv) {
