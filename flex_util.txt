@@ -5,9 +5,6 @@
 #include <stdio.h>
 #include <string.h>
 
-extern FILE* yyout;
-#define OUT yyout
-
 typedef int boolean;
 #define DB(z) fprintf(stderr, "%s\n", z);
 #define true 1
@@ -201,6 +198,9 @@ static float util_MakeFloat(char* from) {
 static long long util_MakeInt(char* from) {
     return atoll(from);
 }
+
+#define OUT stdout
+#include "c_comp.h"
 
 struct JObject;
 struct JArray;
@@ -458,7 +458,8 @@ static void Indent(int num) {
 }
 
 static boolean MaybeInsertIdStr(const char* data) {
-    for (int i = 0; i < database.IdStrs.size; ++i) {
+    int i;
+    for (i = 0; i < database.IdStrs.size; ++i) {
         if (strcmp(data, database.IdStrs.data[i].ptr) == 0) {
             return false;
         }
@@ -468,7 +469,8 @@ static boolean MaybeInsertIdStr(const char* data) {
 }
 
 static boolean MaybeInsertUserId(long long id) {
-    for (int i = 0; i < database.UserIds.size; ++i) {
+    int i;
+    for (i = 0; i < database.UserIds.size; ++i) {
         if (database.UserIds.data[i] == id) {
             return false;
         }
@@ -546,7 +548,8 @@ static JString* Alloc_JString(char* source) {
     const int sourcelen = strlen(source);
 
     s->Length = 0;
-    for (int i = 0; i < sourcelen; ++i) {
+    int i;
+    for (i = 0; i < sourcelen; ++i) {
         char c = source[i];
         
         if (c == '\\') {

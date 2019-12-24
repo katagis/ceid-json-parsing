@@ -1,8 +1,8 @@
 %option noyywrap
 
 %{
+extern FILE* yyout;
 #include "flex_util.h"
-#include "json_classes.h"
 ParserState parser;
 
 #include "y.tab.h"  

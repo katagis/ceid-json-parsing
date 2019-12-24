@@ -1,6 +1,5 @@
 %{
 #include "flex_util.h"
-#include "json_classes.h"
 
 #include <stdio.h>
 #include <math.h>
